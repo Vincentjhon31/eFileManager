@@ -69,6 +69,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Timestamps are STORED in UTC (above) and RENDERED in this timezone. Do
+    | not change 'timezone' to Asia/Manila instead — receiving timestamps on
+    | this system carry legal weight, and storing UTC keeps them unambiguous
+    | if records are ever exchanged with provincial or national agencies.
+    |
+    | Always render with the ph_datetime() / ph_date() helpers in
+    | app/Support/helpers.php, never with raw ->format() on a model date.
+    |
+    */
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Asia/Manila'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

@@ -1,58 +1,89 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# eFileManager
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Internal document management and tracking system for the **Municipality of Bongabong, Oriental Mindoro**.
 
-## About Laravel
+Production: `https://efilemanager.bongabong.gov.ph`
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## What this is
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Three things in one internal system:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. **Document tracking (DTS)** — register a memorandum, route it to another office, formally *receive* it, act on it, close it. Every hand-off is recorded with who, when, and from where. This is the core; everything else supports it.
+2. **File storage** — per-department folders, versioning, search, permission-checked access.
+3. **Building map** — navigate the municipal hall spatially: floors, rooms, offices. Doors light up when an office has documents waiting.
 
-## Learning Laravel
+Plus a **public portal** carrying announcements and the DILG Full Disclosure Policy board.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Guiding principles
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**The building is a view, not the data model.** Underneath it is `departments → folders → files` with a routing engine on top. The map renders that data spatially and always has a sidebar-tree and search equivalent. Delete the map and the system still works.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+**Receiving is append-only.** `document_routes.received_at` is written exactly once and never updated. A correction adds a new row with a remark; it does not rewrite history. This is what makes the log defensible if it is ever questioned.
 
-## Agentic Development
+**A document has exactly one current holder** at any moment. Forwarding closes the current leg and opens the next inside a single transaction.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+**Timestamps are stored in UTC, displayed in Philippine time.** Render with `ph_datetime()` / `ph_date()` (`app/Support/helpers.php`), never with raw `->format()` on a model attribute. See the note in `config/app.php`.
+
+**Documents are never web-reachable.** They live on the `documents` disk at `storage/app/documents`, outside `public/`, with `'serve' => false`. Every read goes through a controller that authorizes first, then streams. Never add that disk to `config/filesystems.php`'s `links` array, and never run `storage:link` against it.
+
+## Stack
+
+| | |
+|---|---|
+| Framework | Laravel 13 (PHP 8.3) |
+| Frontend | Livewire 4 + Tailwind 4 + Alpine.js, built with Vite |
+| Database | MariaDB / MySQL |
+| Roles | spatie/laravel-permission 8 |
+| Tests | PHPUnit 12 |
+
+No websockets — the production host has no persistent process, so live door badges use `wire:poll`. Queues and the scheduler run from cron.
+
+## Local setup
+
+Requires PHP 8.3+, Composer, Node, and MySQL or MariaDB (XAMPP is fine).
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Create both databases — the test suite deliberately uses a real database engine, not SQLite:
 
-## Contributing
+```sql
+CREATE DATABASE efilemanager      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE efilemanager_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Then:
 
-## Code of Conduct
+```bash
+php artisan migrate
+composer dev     # serve + queue + logs + vite together
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+If MySQL is not running under XAMPP, start it from the XAMPP Control Panel, or:
 
-## Security Vulnerabilities
+```
+C:\xampp\mysql\bin\mysqld.exe --defaults-file=C:\xampp\mysql\bin\my.ini --standalone
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tests
 
-## License
+```bash
+php artisan test
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The suite runs against `efilemanager_test` on MySQL/MariaDB, **not** SQLite in-memory. This is deliberate: the routing engine depends on transactional row locking (`lockForUpdate`) for tracking-number uniqueness and single-holder guarantees, and SQLite does not share those semantics. `tests/Feature/DatabaseEngineTest.php` fails loudly if someone points the suite back at SQLite.
+
+## Compliance
+
+This runs on a live `gov.ph` domain and handles personal data, so the following are requirements rather than polish:
+
+- **RA 10173 (Data Privacy Act)** — role-based access, immutable audit logs, confidentiality enforced at the query layer via policies, short session lifetime, encrypted sessions. The LGU must have a registered Data Protection Officer.
+- **RA 9470 (National Archives Act)** — `document_types.retention_years` drives archival and disposal reporting. The system reports; it never auto-deletes.
+- **DILG Full Disclosure Policy** — the public board is a compliance deliverable, not decoration.
+- HTTPS is forced in production, with secure cookies and rate-limited login.
+
+Audit logs are append-only. No update or delete route exists for them at any role.
