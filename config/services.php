@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    /*
+     * Optional Google sign-in. Leave the credentials blank and the feature is
+     * entirely inert: the route is not registered and the button is not
+     * rendered. Google can only ever link to an account an administrator has
+     * already created — it never creates one.
+     */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];

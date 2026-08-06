@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* Native inputs and selects are used throughout the admin screens rather than
+   custom widgets — the forms plugin gives them a consistent, styleable base
+   without giving up keyboard and screen-reader behaviour that comes free. */
+@plugin '@tailwindcss/forms';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
