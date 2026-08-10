@@ -8,11 +8,29 @@
             </p>
         </div>
 
-        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" wire:model.live="mineOnly"
-                   class="rounded border-slate-300 text-blue-700 focus:ring-blue-600">
-            Only what is addressed to me
-        </label>
+        <div class="flex flex-wrap items-center gap-4">
+            {{-- A USB barcode scanner types the number and presses enter, so
+                 this is a plain form with a submit rather than a live filter. --}}
+            <form wire:submit="findByTrackingNumber" class="flex items-start gap-2">
+                <div>
+                    <label for="lookup" class="sr-only">Tracking number</label>
+                    <input id="lookup" wire:model="lookup" type="search" autocomplete="off"
+                           placeholder="Scan or type a tracking number"
+                           class="w-64 rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
+                    @error('lookup') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
+                </div>
+                <button type="submit"
+                        class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                    Go
+                </button>
+            </form>
+
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" wire:model.live="mineOnly"
+                       class="rounded border-slate-300 text-blue-700 focus:ring-blue-600">
+                Only what is addressed to me
+            </label>
+        </div>
     </div>
 
     @unless (auth()->user()->department_id)

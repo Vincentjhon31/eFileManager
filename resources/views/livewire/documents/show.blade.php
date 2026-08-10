@@ -25,10 +25,18 @@
                 </p>
             </div>
 
-            <a href="{{ route('desk') }}" wire:navigate
-               class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                Back to my desk
-            </a>
+            <div class="flex flex-wrap gap-2">
+                {{-- Opens in its own tab: the clerk prints it and comes back to
+                     a page that has not lost its place. --}}
+                <a href="{{ route('documents.slip', $document) }}" target="_blank" rel="noopener"
+                   class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                    Routing slip
+                </a>
+                <a href="{{ route('desk') }}" wire:navigate
+                   class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                    Back to my desk
+                </a>
+            </div>
         </div>
 
         {{-- The question this system exists to answer. --}}

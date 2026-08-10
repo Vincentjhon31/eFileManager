@@ -207,6 +207,20 @@ class Document extends Model
         return $query->open()->whereNotNull('due_at')->where('due_at', '<', now());
     }
 
+    /**
+     * Due by N days from now, already-late ones included.
+     *
+     * One condition rather than "overdue OR due soon", because that is the
+     * actual question a reminder asks: what should this person be thinking
+     * about today.
+     */
+    public function scopeDueBy(Builder $query, int $days): Builder
+    {
+        return $query->open()
+            ->whereNotNull('due_at')
+            ->where('due_at', '<=', now()->addDays($days));
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Presentation

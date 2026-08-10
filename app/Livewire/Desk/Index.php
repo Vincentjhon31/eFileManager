@@ -34,9 +34,50 @@ class Index extends Component
     #[Url(except: false)]
     public bool $mineOnly = false;
 
+    /** Counter lookup: a tracking number typed in, or read by a barcode scanner. */
+    public string $lookup = '';
+
     public function mount(): void
     {
         $this->authorize('viewAny', Document::class);
+    }
+
+    /**
+     * Jump straight to a document by its control number.
+     *
+     * This is the counter workflow: somebody hands over a folder, the clerk
+     * reads the number off the slip — by eye or with a USB scanner, which types
+     * it and presses enter — and lands on the receipt form. The QR route is the
+     * same journey on a phone; this is the one for a desk with a keyboard.
+     */
+    public function findByTrackingNumber()
+    {
+        $number = mb_strtoupper(trim($this->lookup));
+
+        if ($number === '') {
+            return null;
+        }
+
+        $document = Document::query()
+            ->visibleTo(Auth::user())
+            ->where('tracking_no', $number)
+            ->first();
+
+        if (! $document) {
+            // Deliberately the same message whether the number is unknown or
+            // simply belongs to another office: this box would otherwise be a
+            // way to discover which control numbers exist.
+            $this->addError('lookup', "No document here with the number {$number}.");
+
+            return null;
+        }
+
+        $this->reset('lookup');
+
+        return $this->redirectRoute('documents.show', [
+            'document' => $document,
+            'do' => Auth::user()->can('receive', $document) ? 'receive' : null,
+        ], navigate: true);
     }
 
     public function selectTab(string $tab): void

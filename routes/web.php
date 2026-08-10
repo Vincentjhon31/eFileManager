@@ -2,14 +2,17 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\RoutingSlipController;
 use App\Livewire\Admin\AuditTrail;
 use App\Livewire\Admin\Departments;
 use App\Livewire\Admin\Users;
+use App\Livewire\Alerts;
 use App\Livewire\Dashboard;
 use App\Livewire\Desk\Index as Desk;
 use App\Livewire\Documents\Index as DocumentIndex;
 use App\Livewire\Documents\Register as RegisterDocument;
 use App\Livewire\Documents\Show as DocumentShow;
+use App\Livewire\Documents\Track;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,6 +48,8 @@ Route::middleware('auth')->group(function () {
         ->middleware('can:documents.view.own_department')
         ->name('desk');
 
+    Route::get('/alerts', Alerts::class)->name('alerts');
+
     Route::prefix('documents')->name('documents.')->group(function () {
         Route::get('/', DocumentIndex::class)
             ->middleware('can:documents.view.own_department')
@@ -61,7 +66,26 @@ Route::middleware('auth')->group(function () {
         Route::get('/{document}', DocumentShow::class)
             ->middleware('can:documents.view.own_department')
             ->name('show');
+
+        Route::get('/{document}/slip', [RoutingSlipController::class, 'show'])
+            ->middleware('can:documents.view.own_department')
+            ->name('slip');
     });
+
+    /*
+     * Where a scanned routing slip lands.
+     *
+     * Short path on purpose: it is encoded in a QR square printed on A5 paper
+     * and photographed in a corridor, so every character costs resolution.
+     *
+     * 'signed:relative' checks the path and query only, not the host — see
+     * App\Support\TrackingLink for why a printed link must survive the site
+     * moving. It is checked before 'auth' so a tampered link is refused
+     * outright rather than sending a stranger to a sign-in page.
+     */
+    Route::get('/t/{document:tracking_no}', Track::class)
+        ->middleware('signed:relative')
+        ->name('track');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/offices', Departments::class)

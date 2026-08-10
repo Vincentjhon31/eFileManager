@@ -22,6 +22,19 @@
             </a>
 
             <div class="flex items-center gap-4">
+                @php $unreadAlerts = auth()->user()->unreadNotifications()->count(); @endphp
+
+                <a href="{{ route('alerts') }}" wire:navigate
+                   class="relative rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                   aria-label="Alerts{{ $unreadAlerts ? ", {$unreadAlerts} unread" : '' }}">
+                    Alerts
+                    @if ($unreadAlerts > 0)
+                        <span class="absolute -right-1.5 -top-1.5 inline-flex min-w-5 justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold leading-none text-white">
+                            {{ $unreadAlerts > 9 ? '9+' : $unreadAlerts }}
+                        </span>
+                    @endif
+                </a>
+
                 <div class="hidden text-right sm:block">
                     <span class="block text-sm font-medium leading-tight">{{ auth()->user()->name }}</span>
                     <span class="block text-xs text-slate-500">

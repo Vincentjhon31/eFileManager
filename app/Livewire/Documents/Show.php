@@ -5,6 +5,7 @@ namespace App\Livewire\Documents;
 use App\Enums\ActionRequested;
 use App\Enums\ReceiptMethod;
 use App\Exceptions\RoutingException;
+use App\Livewire\Concerns\RecordsReceipt;
 use App\Models\Department;
 use App\Models\Document;
 use App\Models\User;
@@ -23,6 +24,8 @@ use Livewire\Component;
  */
 class Show extends Component
 {
+    use RecordsReceipt;
+
     public Document $document;
 
     /** Which action form is open: release, receive, recall, return, assign, remarks, close. */
@@ -39,13 +42,6 @@ class Show extends Component
 
     public string $route_due_at = '';
 
-    // Receive
-    public string $receipt_method = 'system';
-
-    public string $received_by_name = '';
-
-    public string $received_at = '';
-
     // Assign, remarks, closing
     public ?int $assignee_id = null;
 
@@ -57,6 +53,12 @@ class Show extends Component
 
         $this->document = $document;
         $this->action_requested = ($document->type->default_action ?? ActionRequested::ForAppropriateAction)->value;
+
+        // Arriving from the counter's tracking-number lookup, where the clerk
+        // is already holding the document and wants one thing.
+        if (request('do') === 'receive' && Auth::user()->can('receive', $document)) {
+            $this->open('receive');
+        }
     }
 
     /*
@@ -70,14 +72,8 @@ class Show extends Component
         $this->resetValidation();
         $this->panel = $panel;
 
-        // A paper receipt is the only option when the destination has no
-        // accounts, so do not offer a choice that would only be refused.
         if ($panel === 'receive') {
-            $destination = $this->document->openRoute?->toDepartment;
-            $this->receipt_method = $destination?->acceptsDigitalReceipt()
-                && $destination->getKey() === Auth::user()->department_id
-                    ? ReceiptMethod::System->value
-                    : ReceiptMethod::Manual->value;
+            $this->receipt_method = $this->defaultReceiptMethod($this->document);
         }
     }
 
@@ -140,25 +136,10 @@ class Show extends Component
     {
         $this->authorize('receive', $this->document);
 
-        $method = ReceiptMethod::tryFrom($this->receipt_method) ?? ReceiptMethod::Manual;
-
-        $data = $this->validate([
-            'receipt_method' => ['required', Rule::enum(ReceiptMethod::class)],
-            'received_by_name' => [
-                Rule::requiredIf($method === ReceiptMethod::Manual), 'nullable', 'string', 'max:255',
-            ],
-            'received_at' => ['nullable', 'date'],
-        ], [
-            'received_by_name.required' => 'Enter the name signed on the transmittal.',
-        ]);
-
-        $this->attempt(fn () => $routing->receive(
-            document: $this->document,
-            by: Auth::user(),
-            method: $method,
-            receivedByName: $data['received_by_name'] ?: null,
-            receivedAt: $data['received_at'] ? now()->parse($data['received_at']) : null,
-        ), 'Receipt recorded.');
+        $this->attempt(
+            fn () => $this->recordReceipt($this->document, $routing),
+            'Receipt recorded.',
+        );
     }
 
     public function recall(DocumentRoutingService $routing): void
