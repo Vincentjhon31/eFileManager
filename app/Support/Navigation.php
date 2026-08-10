@@ -55,8 +55,21 @@ class Navigation
                 'visible' => $user->department_id !== null,
             ],
             [
+                'label' => 'Building',
+                'route' => 'building',
+                'visible' => $user->canAny([
+                    Permission::DocumentsViewOwnDepartment->value,
+                    Permission::DocumentsViewAllDepartments->value,
+                ]),
+            ],
+            [
                 'label' => 'Offices',
                 'route' => 'admin.departments.index',
+                'visible' => $user->can(Permission::DepartmentsManage->value),
+            ],
+            [
+                'label' => 'Rooms',
+                'route' => 'admin.rooms.index',
                 'visible' => $user->can(Permission::DepartmentsManage->value),
             ],
             [

@@ -30,7 +30,8 @@ class FolderFactory extends Factory
         ];
     }
 
-    public function for(Department $office, ?User $by = null): static
+    /** Named forOffice, not for — Factory::for() is the relationship helper. */
+    public function forOffice(Department $office, ?User $by = null): static
     {
         return $this->state(fn () => [
             'department_id' => $office->getKey(),

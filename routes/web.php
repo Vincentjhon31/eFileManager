@@ -6,8 +6,10 @@ use App\Http\Controllers\DocumentFileController;
 use App\Http\Controllers\RoutingSlipController;
 use App\Livewire\Admin\AuditTrail;
 use App\Livewire\Admin\Departments;
+use App\Livewire\Admin\Rooms;
 use App\Livewire\Admin\Users;
 use App\Livewire\Alerts;
+use App\Livewire\Building\FloorMap;
 use App\Livewire\Dashboard;
 use App\Livewire\Desk\Index as Desk;
 use App\Livewire\Documents\Index as DocumentIndex;
@@ -53,6 +55,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/alerts', Alerts::class)->name('alerts');
 
     Route::get('/drive', DriveBrowser::class)->name('drive');
+
+    Route::get('/building', FloorMap::class)
+        ->middleware('can:documents.view.own_department')
+        ->name('building');
 
     /*
      * The only way to read a stored file.
@@ -109,6 +115,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', Users::class)
             ->middleware('can:users.manage.own_department')
             ->name('users.index');
+
+        Route::get('/rooms', Rooms::class)
+            ->middleware('can:departments.manage')
+            ->name('rooms.index');
 
         Route::get('/audit', AuditTrail::class)
             ->middleware('can:audit.view.own_department')
