@@ -28,6 +28,12 @@ enum Permission: string
     case DocumentsViewOwnDepartment = 'documents.view.own_department';
     case DocumentsViewAllDepartments = 'documents.view.all_departments';
 
+    // Subtracts nothing on its own — it only lifts the extra restriction on
+    // documents marked confidential, and only within offices the holder can
+    // already see. Held by office heads and department administrators, not by
+    // every clerk, because these are personnel, legal and disciplinary papers.
+    case DocumentsViewConfidential = 'documents.view.confidential';
+
     // Audit trail — read only, always. There is no write, edit or delete
     // permission for audit logs anywhere in this system.
     case AuditViewOwnDepartment = 'audit.view.own_department';
@@ -48,6 +54,7 @@ enum Permission: string
             self::DocumentsAct => 'Act on documents (approve, sign, return)',
             self::DocumentsViewOwnDepartment => 'View own office documents',
             self::DocumentsViewAllDepartments => 'View all offices\' documents',
+            self::DocumentsViewConfidential => 'Open confidential documents in own office',
             self::AuditViewOwnDepartment => 'View own office audit trail',
             self::AuditViewAllDepartments => 'View full audit trail',
             self::SettingsManage => 'Manage system settings',

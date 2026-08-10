@@ -31,6 +31,25 @@ class Navigation
                 'visible' => true,
             ],
             [
+                'label' => 'My Desk',
+                'route' => 'desk',
+                'visible' => $user->canAny([
+                    Permission::DocumentsViewOwnDepartment->value,
+                    Permission::DocumentsViewAllDepartments->value,
+                ]),
+            ],
+            [
+                'label' => 'Documents',
+                'route' => 'documents.index',
+                // Registering and opening a document both belong under this
+                // tab, so it stays lit across the whole documents.* family.
+                'active' => 'documents.*',
+                'visible' => $user->canAny([
+                    Permission::DocumentsViewOwnDepartment->value,
+                    Permission::DocumentsViewAllDepartments->value,
+                ]),
+            ],
+            [
                 'label' => 'Offices',
                 'route' => 'admin.departments.index',
                 'visible' => $user->can(Permission::DepartmentsManage->value),
@@ -58,7 +77,7 @@ class Navigation
             ->map(fn (array $item) => [
                 'label' => $item['label'],
                 'url' => route($item['route']),
-                'active' => request()->routeIs($item['route'].'*'),
+                'active' => request()->routeIs($item['active'] ?? $item['route'].'*'),
             ])
             ->values()
             ->all();

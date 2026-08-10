@@ -32,9 +32,16 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Two statements, in this order, on purpose. MySQL did not create its
+        // own index for the foreign key — it reused (department_id, is_active),
+        // whose leftmost column already covers it — so that index cannot be
+        // dropped while the constraint exists. Removing the constrained column
+        // takes the constraint and the index with it.
         Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['department_id', 'is_active']);
             $table->dropConstrainedForeignId('department_id');
+        });
+
+        Schema::table('users', function (Blueprint $table) {
             $table->dropColumn(['employee_no', 'position', 'google_id', 'is_active', 'last_login_at']);
         });
     }

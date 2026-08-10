@@ -66,6 +66,7 @@ enum Role: string
                 Permission::DocumentsReceive,
                 Permission::DocumentsAct,
                 Permission::DocumentsViewOwnDepartment,
+                Permission::DocumentsViewConfidential,
             ],
 
             self::ReceivingClerk => [
@@ -81,6 +82,7 @@ enum Role: string
                 Permission::DocumentsReceive,
                 Permission::DocumentsAct,
                 Permission::DocumentsViewOwnDepartment,
+                Permission::DocumentsViewConfidential,
                 Permission::AuditViewOwnDepartment,
             ],
 
