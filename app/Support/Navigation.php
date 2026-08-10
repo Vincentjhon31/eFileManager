@@ -50,6 +50,11 @@ class Navigation
                 ]),
             ],
             [
+                'label' => 'Drive',
+                'route' => 'drive',
+                'visible' => $user->department_id !== null,
+            ],
+            [
                 'label' => 'Offices',
                 'route' => 'admin.departments.index',
                 'visible' => $user->can(Permission::DepartmentsManage->value),

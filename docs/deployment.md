@@ -34,6 +34,33 @@ curl -I https://efilemanager.bongabong.gov.ph/storage/app/documents/
 # expect 403 or 404 — anything else means stop and fix the document root
 ```
 
+Stored files are written with a UUID name and **no extension**, so even if that
+directory were exposed there is nothing in it a web server would agree to run.
+That is a second line of defence, not a reason to relax about the first.
+
+## Upload limits
+
+PHP's limits are lower than the application's by default, and **PHP's win
+silently** — an upload larger than `post_max_size` never reaches Laravel, so the
+user sees a form that did nothing rather than an error explaining why. Set both
+above `DRIVE_MAX_UPLOAD_MB` (50 by default) in the host's PHP configuration:
+
+```ini
+upload_max_filesize = 64M
+post_max_size       = 64M
+max_execution_time  = 120
+```
+
+If the office starts scanning large annexes, raise `DRIVE_MAX_UPLOAD_MB` **and**
+these together. Raising one alone achieves nothing.
+
+There is deliberately no chunked-upload machinery. Everything a municipal
+records office files — scanned PDFs, photographs, spreadsheets — arrives well
+inside a single request, and a chunking layer would be a few hundred lines of
+JavaScript and a reassembly endpoint to maintain for a case that has not
+appeared. If it ever does, this is the note that says the decision was made
+knowingly.
+
 ## Deploy
 
 ```bash

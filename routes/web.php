@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\DocumentFileController;
 use App\Http\Controllers\RoutingSlipController;
 use App\Livewire\Admin\AuditTrail;
 use App\Livewire\Admin\Departments;
@@ -13,6 +14,7 @@ use App\Livewire\Documents\Index as DocumentIndex;
 use App\Livewire\Documents\Register as RegisterDocument;
 use App\Livewire\Documents\Show as DocumentShow;
 use App\Livewire\Documents\Track;
+use App\Livewire\Drive\Browser as DriveBrowser;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,6 +51,18 @@ Route::middleware('auth')->group(function () {
         ->name('desk');
 
     Route::get('/alerts', Alerts::class)->name('alerts');
+
+    Route::get('/drive', DriveBrowser::class)->name('drive');
+
+    /*
+     * The only way to read a stored file.
+     *
+     * The documents disk lives outside the web root with 'serve' => false, so
+     * there is no URL that reaches the bytes and no symlink pointing at them.
+     * Both actions authorise through FilePolicy and write to the audit trail.
+     */
+    Route::get('/files/{file}/download', [DocumentFileController::class, 'download'])->name('files.download');
+    Route::get('/files/{file}/preview', [DocumentFileController::class, 'preview'])->name('files.preview');
 
     Route::prefix('documents')->name('documents.')->group(function () {
         Route::get('/', DocumentIndex::class)

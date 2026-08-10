@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -102,6 +103,13 @@ class Document extends Model
     public function actions(): HasMany
     {
         return $this->hasMany(DocumentAction::class)->orderBy('id');
+    }
+
+    /** Scans and annexes. Ordinary drive files, attached — not a second store. */
+    public function files(): BelongsToMany
+    {
+        return $this->belongsToMany(File::class, 'document_files')
+            ->withPivot(['kind', 'attached_by', 'created_at']);
     }
 
     /**

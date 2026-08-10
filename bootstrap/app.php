@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\DriveException;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,4 +26,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        /*
+         * Drive failures that reach a full page request rather than a Livewire
+         * action — in practice, a stored file whose bytes have gone missing.
+         * The message says what happened and what to do about it, which is
+         * more use to a clerk than a generic 500, and it is the sort of thing
+         * MIS needs told rather than swallowed.
+         */
+        $exceptions->render(function (DriveException $e, Request $request) {
+            return $request->expectsJson()
+                ? response()->json(['message' => $e->getMessage()], 500)
+                : response()->view('errors.drive', ['message' => $e->getMessage()], 500);
+        });
     })->create();

@@ -347,8 +347,11 @@
             </div>
         </div>
 
-        {{-- Timeline --}}
-        <div class="lg:col-span-2">
+        {{-- Attachments and timeline --}}
+        <div class="space-y-6 lg:col-span-2">
+
+            @livewire('documents.attachments', ['document' => $document], key('attachments-'.$document->id))
+
             <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 class="text-base font-semibold text-slate-900">Chain of custody</h2>
                 <p class="mt-1 text-sm text-slate-600">

@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             DepartmentSeeder::class,
             DocumentTypeSeeder::class,
+            FolderSeeder::class,
             AdminUserSeeder::class,
         ]);
     }
