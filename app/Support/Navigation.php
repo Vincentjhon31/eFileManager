@@ -81,6 +81,16 @@ class Navigation
                 ]),
             ],
             [
+                'label' => 'Notices',
+                'route' => 'admin.announcements.index',
+                'visible' => $user->can(Permission::PublicPublish->value),
+            ],
+            [
+                'label' => 'Disclosure board',
+                'route' => 'admin.disclosures.index',
+                'visible' => $user->can(Permission::PublicPublish->value),
+            ],
+            [
                 'label' => 'Audit trail',
                 'route' => 'admin.audit.index',
                 'visible' => $user->canAny([

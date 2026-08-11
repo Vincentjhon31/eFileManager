@@ -39,6 +39,23 @@ enum Permission: string
     case AuditViewOwnDepartment = 'audit.view.own_department';
     case AuditViewAllDepartments = 'audit.view.all_departments';
 
+    /*
+     * Putting something on the municipality's public page.
+     *
+     * Deliberately attached to no operational role at seed time — not to
+     * department administrators, not to approving officers. The system
+     * administrator holds it because they hold everything, and their first job
+     * with it is to grant it directly to the person the LGU has designated as
+     * focal person for the Full Disclosure Policy.
+     *
+     * Every other permission here describes a job somebody does. This one
+     * describes an authority the municipality confers on a named individual.
+     *
+     * The audience is the whole town, and there is no taking a disclosure back
+     * once it has been read.
+     */
+    case PublicPublish = 'public.publish';
+
     // Settings
     case SettingsManage = 'settings.manage';
 
@@ -55,6 +72,7 @@ enum Permission: string
             self::DocumentsViewOwnDepartment => 'View own office documents',
             self::DocumentsViewAllDepartments => 'View all offices\' documents',
             self::DocumentsViewConfidential => 'Open confidential documents in own office',
+            self::PublicPublish => 'Publish to the public portal',
             self::AuditViewOwnDepartment => 'View own office audit trail',
             self::AuditViewAllDepartments => 'View full audit trail',
             self::SettingsManage => 'Manage system settings',

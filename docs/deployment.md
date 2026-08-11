@@ -38,6 +38,52 @@ Stored files are written with a UUID name and **no extension**, so even if that
 directory were exposed there is nothing in it a web server would agree to run.
 That is a second line of defence, not a reason to relax about the first.
 
+## The site root is public
+
+`/` is the municipality's public page — notices and the Full Disclosure Policy
+board — not the staff sign-in screen. This is deliberate: a `gov.ph` address
+should greet a visitor with the town's business, not a login form for a system
+they have no account on. Staff reach their desk at `/dashboard`, from the
+"Staff sign in" link in the corner of the public page.
+
+Whoever manages DNS/SEO for the domain should treat `/`, `/notices` and
+`/disclosure` as the pages the public actually finds — that is where a search
+engine or a QR code on a printed notice should point.
+
+## The Full Disclosure Policy board
+
+`App\Enums\DisclosureCategory` groups postings under sensible headings, but its
+own doc comment says plainly that the list has **not** been checked against the
+DILG memorandum circular currently in force. Before pointing DILG or the public
+at this page as the LGU's compliance channel:
+
+1. Confirm the current posting requirements with the Municipal Budget Officer
+   or the Local Finance Committee.
+2. Adjust `DisclosureCategory` if the required headings differ.
+3. Make sure whoever holds `public.publish` (see below) knows what must be
+   posted and by when — the software enforces nothing about *timeliness*, only
+   about the two-step publish/withdraw act itself.
+
+## Granting the publish permission
+
+`public.publish` is deliberately given to no role at seed time — only the
+system administrator holds it, by virtue of holding everything. It gates both
+screens under Admin → Notices and Admin → Disclosure board, and there is no
+separate "draft only" permission: whoever can write a notice can also put it in
+front of the whole town.
+
+After deploying, a system administrator should grant it directly to whoever the
+LGU has actually designated as FDP focal person:
+
+```bash
+php artisan tinker
+>>> $user = App\Models\User::where('email', 'focal.person@bongabong.gov.ph')->firstOrFail();
+>>> $user->givePermissionTo(App\Enums\Permission::PublicPublish->value);
+```
+
+Do not grant it to every department administrator "to be safe" — the audience
+for a mistake here is the entire municipality, not one office.
+
 ## Upload limits
 
 PHP's limits are lower than the application's by default, and **PHP's win

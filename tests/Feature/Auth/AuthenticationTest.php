@@ -121,11 +121,11 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/')->assertOk();
+        $this->actingAs($user)->get('/dashboard')->assertOk();
 
         $user->update(['is_active' => false]);
 
-        $this->get('/')->assertRedirect(route('login'));
+        $this->get('/dashboard')->assertRedirect(route('login'));
         $this->assertGuest();
 
         $this->assertDatabaseHas('audit_logs', [
@@ -136,10 +136,17 @@ class AuthenticationTest extends TestCase
 
     public function test_guests_are_sent_to_the_login_screen(): void
     {
-        $this->get('/')->assertRedirect(route('login'));
+        $this->get('/dashboard')->assertRedirect(route('login'));
         $this->get('/admin/users')->assertRedirect(route('login'));
         $this->get('/admin/offices')->assertRedirect(route('login'));
         $this->get('/admin/audit')->assertRedirect(route('login'));
+    }
+
+    /** The public page needs no account at all — it is not behind 'guest' or 'auth'. */
+    public function test_the_public_page_is_reachable_by_anyone(): void
+    {
+        $this->get('/')->assertOk();
+        $this->actingAs(User::factory()->create())->get('/')->assertOk();
     }
 
     public function test_the_audit_trail_survives_the_user_being_deleted(): void

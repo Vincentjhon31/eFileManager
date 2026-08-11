@@ -3,9 +3,13 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\DocumentFileController;
+use App\Http\Controllers\PublicFileController;
+use App\Http\Controllers\PublicPortalController;
 use App\Http\Controllers\RoutingSlipController;
+use App\Livewire\Admin\Announcements;
 use App\Livewire\Admin\AuditTrail;
 use App\Livewire\Admin\Departments;
+use App\Livewire\Admin\Disclosures;
 use App\Livewire\Admin\Rooms;
 use App\Livewire\Admin\Users;
 use App\Livewire\Alerts;
@@ -18,6 +22,34 @@ use App\Livewire\Documents\Show as DocumentShow;
 use App\Livewire\Documents\Track;
 use App\Livewire\Drive\Browser as DriveBrowser;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| The public page
+|--------------------------------------------------------------------------
+|
+| No authentication, and at the root of the domain on purpose. This is a
+| gov.ph address: somebody who finds it should meet the municipality's notices
+| and its Full Disclosure Policy board, not a sign-in form for a system they
+| have no account on. Staff reach their desk from the link in the corner.
+|
+| Every route below reads through a Live scope. Nothing here can reach a draft,
+| a withdrawn disclosure, or anything at all in the drive.
+|
+*/
+
+Route::name('public.')->group(function () {
+    Route::get('/', [PublicPortalController::class, 'home'])->name('home');
+    Route::get('/notices', [PublicPortalController::class, 'announcements'])->name('announcements');
+    Route::get('/notices/{announcement}', [PublicPortalController::class, 'announcement'])->name('announcement');
+    Route::get('/disclosure', [PublicPortalController::class, 'disclosure'])->name('disclosure');
+
+    // Throttled: a disclosure board is meant to be read, not harvested in a
+    // loop by something that will then complain the server is slow.
+    Route::get('/disclosure/{publicFile}/download', [PublicFileController::class, 'download'])
+        ->middleware('throttle:60,1')
+        ->name('download');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -46,7 +78,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
     Route::get('/desk', Desk::class)
         ->middleware('can:documents.view.own_department')
@@ -123,5 +155,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/audit', AuditTrail::class)
             ->middleware('can:audit.view.own_department')
             ->name('audit.index');
+
+        Route::get('/notices', Announcements::class)
+            ->middleware('can:public.publish')
+            ->name('announcements.index');
+
+        Route::get('/disclosures', Disclosures::class)
+            ->middleware('can:public.publish')
+            ->name('disclosures.index');
     });
 });
