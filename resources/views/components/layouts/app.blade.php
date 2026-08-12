@@ -10,7 +10,16 @@
     data-theme-choice remembers what was actually asked for, because "match my
     device" has to be re-resolved when the device changes its mind.
 --}}
+{{--
+    data-skin is what turns the whole staff interface pixel.
+
+    Nothing below it in this file, and nothing in any of the thirty screens it
+    frames, knows that: skin.css redefines the variables Tailwind's utilities
+    already point at, exactly as app.css does for dark mode. See the note at the
+    top of that file for why this beats rewriting every template.
+--}}
 <html lang="en" class="h-full"
+      data-skin="pixel"
       data-theme-choice="{{ $appearance->theme() }}"
       data-density="{{ $appearance->density() }}"
       data-text="{{ $appearance->textSize() }}">
@@ -75,7 +84,9 @@
         })();
     </script>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- After app.css, so the skin's token overrides win. skin.css imports
+         pixel.css, which is where the palette and the display face come from. --}}
+    @vite(['resources/css/app.css', 'resources/css/skin.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-slate-50 text-slate-900 antialiased">
 <div x-data="{ sidebarOpen: false }" class="flex h-full">

@@ -23,6 +23,7 @@ export default defineConfig({
                  * brings both — neither ships the other's weight.
                  */
                 'resources/css/pixel.css',
+                'resources/css/skin.css',
                 'resources/css/world.css',
                 'resources/js/world.js',
             ],

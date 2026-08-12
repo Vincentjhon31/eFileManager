@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+{{-- data-skin turns the sign-in page pixel too: it is the door the
+     welcome page's Municipal Hall leads to, and arriving at an unskinned form
+     would make the town feel like a separate site. --}}
+<html lang="en" class="h-full" data-skin="pixel">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Sign in' }} — {{ config('app.name') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/css/skin.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-slate-100 text-slate-900 antialiased">
     <div class="flex min-h-full flex-col justify-center px-4 py-12">

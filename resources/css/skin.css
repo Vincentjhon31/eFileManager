@@ -1,0 +1,411 @@
+/*
+|==============================================================================
+| The pixel skin, for the staff interface
+|==============================================================================
+|
+| Documents, Drive, the admin screens and Settings are thirty-odd Blade templates
+| written in ordinary Tailwind: `rounded-xl border border-slate-200 bg-white
+| shadow-sm`, over and over. Rewriting all of them into .px- classes would be
+| thirty files to keep in step and one forgotten `bg-white` away from a white card
+| on a parchment page, for ever.
+|
+| So this does what app.css already does for dark mode, and for the same reason:
+| it redefines the variables Tailwind's utilities already point at. `bg-white` and
+| `text-slate-900` keep their names and change their meaning. No template knows
+| any of this is happening, and a screen added tomorrow is skinned before it is
+| written.
+|
+| Scoped to [data-skin='pixel'] on <html>, which layouts.app sets. A page without
+| it — the print stylesheet for a routing slip, anything embedded — is untouched.
+|
+| What is deliberately NOT done here: nothing changes a size, a spacing or a
+| position. Radius and colour are free, and box-shadow costs no layout, so the
+| chunky edges are drawn as shadows rather than as thicker borders. The Drive's
+| rubber-band selection and every dropdown and modal in the app measure real
+| geometry, and this file has no business moving any of it.
+|
+*/
+
+@import './pixel.css';
+
+/*
+|------------------------------------------------------------------------------
+| No corners
+|------------------------------------------------------------------------------
+|
+| Tailwind v4 compiles `rounded-lg` to `border-radius: var(--radius-lg)`, so the
+| whole scale can be flattened from here. `rounded-full` is the exception — it
+| compiles to a literal, not a token — so it is squared off by name. Pixel art has
+| no curves, including on avatars.
+*/
+
+[data-skin='pixel'] {
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --radius-2xl: 0px;
+    --radius-3xl: 0px;
+    --radius-4xl: 0px;
+}
+
+[data-skin='pixel'] .rounded-full {
+    border-radius: 0;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Parchment and ink
+|------------------------------------------------------------------------------
+|
+| The neutral ramp, remapped. Surfaces get warmer and lighter as the number
+| falls, text darker as it rises — which is how the original values are used, so
+| every existing utility keeps meaning what it meant.
+|
+| slate-200 and slate-300 become ink outright, because in this codebase they are
+| almost only ever a border or a one-pixel divider. The three places that use
+| slate-200 as a background are all `h-px`/`w-px` rules and a file-input hover,
+| which want to be ink lines anyway.
+*/
+
+[data-skin='pixel'] {
+    --color-white: #fffdf6;
+    --color-slate-50: #ece2cf;
+    --color-slate-100: #e6dcc6;
+    --color-slate-200: #1b1f2a;
+    --color-slate-300: #1b1f2a;
+    --color-slate-400: #857c62;
+    --color-slate-500: #6e6552;
+    --color-slate-600: #5c5442;
+    --color-slate-700: #4a4535;
+    --color-slate-800: #33301f;
+    --color-slate-900: #1b1f2a;
+
+    /*
+    | Blue stays navy as a *colour*, because text-blue-800 is every link in the
+    | app and amber text on parchment cannot be read. The primary button is
+    | recoloured further down by name instead — a background is a different job
+    | from a foreground, and this is the one token that has to do both.
+    */
+    --color-blue-50: #f7e6c2;
+    --color-blue-100: #f0dcb0;
+    --color-blue-200: #1b3a6b;
+    --color-blue-300: #1b3a6b;
+    --color-blue-500: #1b3a6b;
+    --color-blue-600: #1b3a6b;
+    --color-blue-700: #1b3a6b;
+    --color-blue-800: #1b3a6b;
+    --color-blue-900: #14284a;
+}
+
+/* The page itself gets the parchment checker, the same one the public side uses.
+   bg-slate-50 on <body> supplies the colour; this adds the texture over it. */
+[data-skin='pixel'] body {
+    background-image:
+        linear-gradient(
+            45deg,
+            rgba(27, 31, 42, 0.028) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(27, 31, 42, 0.028) 75%
+        ),
+        linear-gradient(
+            45deg,
+            rgba(27, 31, 42, 0.028) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(27, 31, 42, 0.028) 75%
+        );
+    background-size: 16px 16px;
+    background-position:
+        0 0,
+        8px 8px;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Chunky edges, drawn as shadows
+|------------------------------------------------------------------------------
+|
+| 131 elements in this app carry `shadow-sm`, which is the house card. Turning
+| that one utility into a 2px ink outline plus a hard offset block skins nearly
+| every card in the interface at a stroke.
+|
+| Shadows rather than thicker borders on purpose: box-shadow costs no layout, so
+| nothing shifts by the 2px it would take to do this with border-width, and the
+| Drive's selection maths keeps measuring what it measured before.
+*/
+
+[data-skin='pixel'] .shadow-sm,
+[data-skin='pixel'] .shadow {
+    box-shadow:
+        0 0 0 2px var(--ink),
+        4px 4px 0 rgba(27, 31, 42, 0.13) !important;
+}
+
+[data-skin='pixel'] .shadow-md {
+    box-shadow:
+        0 0 0 2px var(--ink),
+        5px 5px 0 rgba(27, 31, 42, 0.16) !important;
+}
+
+/* Modals and popovers stand further off the page than a card does. */
+[data-skin='pixel'] .shadow-lg,
+[data-skin='pixel'] .shadow-xl,
+[data-skin='pixel'] .shadow-2xl {
+    box-shadow:
+        0 0 0 3px var(--ink),
+        8px 8px 0 rgba(27, 31, 42, 0.22) !important;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Type
+|------------------------------------------------------------------------------
+|
+| Headings only. Body copy stays in the interface face at the interface size: this
+| is a system people read all day, and a display face set at 14px for eight hours
+| is a different proposition from one set large on a welcome page.
+*/
+
+[data-skin='pixel'] h1,
+[data-skin='pixel'] h2,
+[data-skin='pixel'] h3,
+[data-skin='pixel'] h4 {
+    font-family: var(--display);
+    letter-spacing: -0.005em;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The primary button
+|------------------------------------------------------------------------------
+|
+| Amber with ink lettering. Recoloured by class name rather than through the blue
+| token, because that token is also every link in the app.
+|
+| The second rule is the same trick app.css already plays for dark mode: a handful
+| of elements are a dark fill with white text, and once the fill is amber the white
+| text is gone. Two classes beat one, so these win over .text-white without
+| !important.
+*/
+
+[data-skin='pixel'] .bg-blue-700,
+[data-skin='pixel'] .bg-blue-800,
+[data-skin='pixel'] .hover\:bg-blue-800:hover,
+[data-skin='pixel'] .hover\:bg-blue-900:hover {
+    background-color: var(--amber);
+}
+
+[data-skin='pixel'] .bg-blue-700.text-white,
+[data-skin='pixel'] .bg-blue-800.text-white,
+[data-skin='pixel'] .bg-slate-900.text-white {
+    color: var(--ink);
+}
+
+/*
+| And the second line inside those blocks.
+|
+| A primary panel is usually a white title over a text-blue-100 description —
+| pale blue chosen to sit quietly on a dark blue fill. On amber it disappears
+| altogether. Inked back, at three-quarter strength so it still reads as
+| secondary to the line above it.
+*/
+[data-skin='pixel'] .bg-blue-700 .text-blue-100,
+[data-skin='pixel'] .bg-blue-700 .text-blue-200,
+[data-skin='pixel'] .bg-blue-800 .text-blue-100,
+[data-skin='pixel'] .bg-blue-800 .text-blue-200 {
+    color: rgba(27, 31, 42, 0.72);
+}
+
+/* Amber on amber has nothing left to say on hover, so the affirmation is the
+   same nudge the pixel buttons use everywhere else. */
+[data-skin='pixel'] .bg-blue-700,
+[data-skin='pixel'] .bg-blue-800 {
+    transition: transform 0.1s steps(2);
+}
+
+[data-skin='pixel'] .bg-blue-700:hover,
+[data-skin='pixel'] .bg-blue-800:hover {
+    transform: translate(-2px, -2px);
+    box-shadow:
+        0 0 0 2px var(--ink),
+        4px 4px 0 var(--ink);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Fields
+|------------------------------------------------------------------------------
+|
+| @tailwindcss/forms paints these with its own border colour and radius at a
+| specificity that has to be beaten, so the whole control is described rather than
+| adjusted. Focus is amber, which is the one thing on these screens allowed to
+| shout.
+*/
+
+[data-skin='pixel'] input:not([type='checkbox']):not([type='radio']):not([type='file']),
+[data-skin='pixel'] select,
+[data-skin='pixel'] textarea {
+    border: 0;
+    border-radius: 0;
+    background-color: #fff;
+    box-shadow: 0 0 0 2px var(--ink);
+    color: var(--ink);
+}
+
+[data-skin='pixel'] input:focus,
+[data-skin='pixel'] select:focus,
+[data-skin='pixel'] textarea:focus {
+    outline: 0;
+    box-shadow:
+        0 0 0 2px var(--ink),
+        0 0 0 5px var(--amber);
+}
+
+[data-skin='pixel'] [type='checkbox'],
+[data-skin='pixel'] [type='radio'] {
+    border-radius: 0;
+    box-shadow: 0 0 0 2px var(--ink);
+}
+
+[data-skin='pixel'] ::placeholder {
+    color: #8a8168;
+    opacity: 1;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The sidebar
+|------------------------------------------------------------------------------
+*/
+
+/* The active item: an amber block with a hard edge, rather than a soft blue
+   lozenge. */
+[data-skin='pixel'] nav a.bg-blue-50 {
+    background-color: var(--amber);
+    color: var(--ink);
+    box-shadow: 0 0 0 2px var(--ink);
+}
+
+[data-skin='pixel'] .bg-slate-900\/30,
+[data-skin='pixel'] .bg-slate-900\/40,
+[data-skin='pixel'] .bg-slate-900\/60 {
+    background-color: rgba(27, 31, 42, 0.55);
+}
+
+/*
+|==============================================================================
+| After dark
+|==============================================================================
+|
+| Appearance → Dark is a real setting people use, and a fixed parchment palette
+| would have quietly broken it. So the skin has a night palette too: the slate and
+| cream the drawn town's own interface panels are built from, which is where this
+| whole look came from in the first place.
+|
+| Two attributes beat app.css's one, so these win over its dark-mode block without
+| needing !important.
+|
+*/
+
+[data-skin='pixel'][data-theme='dark'] {
+    color-scheme: dark;
+
+    --color-white: #222938;
+    --color-slate-50: #171c26;
+    --color-slate-100: #2b3446;
+    --color-slate-200: #3a4356;
+    --color-slate-300: #4a5568;
+    --color-slate-400: #7e8fa8;
+    --color-slate-500: #9dafc6;
+    --color-slate-600: #b8c6d8;
+    --color-slate-700: #d3dce8;
+    --color-slate-800: #e8eef6;
+    --color-slate-900: #f4ecda;
+
+    --color-blue-50: #3a2f18;
+    --color-blue-100: #4a3c1d;
+    --color-blue-500: #8ab8f9;
+    --color-blue-600: #8ab8f9;
+    --color-blue-700: #8ab8f9;
+    --color-blue-800: #8ab8f9;
+    --color-blue-900: #b3d0fb;
+
+    /* The ink of the night: outlines are near-black against slate, and the
+       offset blocks are darker still rather than lighter. */
+    --ink: #0d1119;
+}
+
+[data-skin='pixel'][data-theme='dark'] body {
+    background-image:
+        linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.016) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(255, 255, 255, 0.016) 75%
+        ),
+        linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.016) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(255, 255, 255, 0.016) 75%
+        );
+}
+
+[data-skin='pixel'][data-theme='dark'] .shadow-sm,
+[data-skin='pixel'][data-theme='dark'] .shadow {
+    box-shadow:
+        0 0 0 2px var(--ink),
+        4px 4px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-skin='pixel'][data-theme='dark'] .shadow-lg,
+[data-skin='pixel'][data-theme='dark'] .shadow-xl,
+[data-skin='pixel'][data-theme='dark'] .shadow-2xl {
+    box-shadow:
+        0 0 0 3px var(--ink),
+        8px 8px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-skin='pixel'][data-theme='dark'] input:not([type='checkbox']):not([type='radio']):not([type='file']),
+[data-skin='pixel'][data-theme='dark'] select,
+[data-skin='pixel'][data-theme='dark'] textarea {
+    background-color: #171c26;
+    color: #f4ecda;
+}
+
+[data-skin='pixel'][data-theme='dark'] ::placeholder {
+    color: #7e8fa8;
+}
+
+/* Amber still carries ink lettering after dark — it is the same amber. */
+[data-skin='pixel'][data-theme='dark'] .bg-blue-700,
+[data-skin='pixel'][data-theme='dark'] .bg-blue-800,
+[data-skin='pixel'][data-theme='dark'] .hover\:bg-blue-800:hover,
+[data-skin='pixel'][data-theme='dark'] .hover\:bg-blue-900:hover {
+    background-color: var(--amber);
+}
+
+[data-skin='pixel'][data-theme='dark'] .bg-blue-700.text-white,
+[data-skin='pixel'][data-theme='dark'] .bg-blue-800.text-white {
+    color: #1b1f2a;
+}
+
+[data-skin='pixel'][data-theme='dark'] nav a.bg-blue-50 {
+    background-color: var(--amber);
+    color: #1b1f2a;
+}
+
+/*
+| Stillness, honoured here as everywhere else.
+*/
+@media (prefers-reduced-motion: reduce) {
+    [data-skin='pixel'] .bg-blue-700,
+    [data-skin='pixel'] .bg-blue-800 {
+        transition: none !important;
+    }
+}
