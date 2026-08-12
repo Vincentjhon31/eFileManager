@@ -10,8 +10,7 @@ use App\Models\User;
  * The four numbers an employee cares about, in one place.
  *
  * Shared by the dashboard tiles and the My Desk tabs so the two can never
- * disagree — and these are the same counts that will light the doors on the
- * building map in Phase 5.
+ * disagree.
  */
 class DeskCounts
 {

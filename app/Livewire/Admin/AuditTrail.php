@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Enums\Permission;
+use App\Livewire\Concerns\PaginatesByPreference;
 use App\Models\AuditLog;
 use App\Models\Department;
 use Illuminate\Support\Facades\Auth;
@@ -22,7 +23,7 @@ use Livewire\WithPagination;
  */
 class AuditTrail extends Component
 {
-    use WithPagination;
+    use PaginatesByPreference, WithPagination;
 
     #[Url(as: 'q', except: '')]
     public string $search = '';
@@ -69,7 +70,7 @@ class AuditTrail extends Component
                     ->orWhere('event', 'like', $term));
             })
             ->latestFirst()
-            ->paginate(50);
+            ->paginate($this->perPage());
 
         return view('livewire.admin.audit-trail', [
             'logs' => $logs,

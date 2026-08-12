@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             DocumentTypeSeeder::class,
             FolderSeeder::class,
-            BuildingSeeder::class,
+            WorkspaceAppSeeder::class,
             AdminUserSeeder::class,
         ]);
     }

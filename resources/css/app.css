@@ -12,3 +12,197 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/*
+| x-cloak, and why it is scoped to "before Alpine has booted".
+|
+| The plain [x-cloak] { display: none !important } every Alpine project starts
+| with is a trap here, because this app morphs the DOM constantly.
+|
+| Livewire's morph patches an element's attributes from the freshly parsed
+| server HTML, and it skips that patch only for elements it can see are
+| currently *shown* (patchAttributes checks _x_isShown). An element hidden by
+| x-show is therefore patched — and the server HTML still carries x-cloak, so
+| the attribute lands back on it. Alpine strips x-cloak once, when it first
+| walks an element, and never again; the element keeps it from then on.
+|
+| The result is that after the first morph, every overlay that happened to be
+| closed at that moment — the drive's file preview, its context menu and
+| selection bar, and every dropdown menu in the app — can never be shown again,
+| because display:none !important beats the inline style x-show sets. Only a
+| full page reload clears it.
+|
+| So x-cloak does its one real job, hiding things during the gap before Alpine
+| boots, and becomes inert the moment that gap closes. After that it is just an
+| attribute, and morph may copy it around freely without hiding anything.
+*/
+html:not([data-alpine-ready]) [x-cloak] {
+    display: none !important;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Appearance
+|------------------------------------------------------------------------------
+|
+| Settings → Appearance writes three attributes onto <html>, and everything
+| below reads them. No Blade template knows about any of this: dark mode works
+| by redefining the colour variables Tailwind's utilities already point at, so
+| `bg-white` and `text-slate-900` keep their names and change their meaning.
+|
+| Adding `dark:` variants to thirty templates instead would have meant thirty
+| files to keep in step, and one forgotten `bg-white` is a white card on a dark
+| page. This way there is nothing to forget.
+|
+*/
+
+/*
+| Dark.
+|
+| Only two families move: the neutral ramp, which is the page itself, and blue,
+| which is this app's one accent — links, focus rings, the active nav item and
+| every primary button. Red, amber and green are deliberately left alone. They
+| appear as `bg-red-50 text-red-800` alert cards, and leaving them light keeps
+| a warning legible and loud on a dark page rather than requiring a second
+| palette to be got right unseen.
+*/
+[data-theme='dark'] {
+    /* Native scrollbars, form controls and the browser's own chrome. */
+    color-scheme: dark;
+
+    /* The neutral ramp, turned over. Surfaces get darker as the number falls,
+       text lighter as it rises — which is exactly how the light values are
+       used, so every existing utility keeps meaning what it meant. */
+    --color-white: #131c2e;
+    --color-slate-50: #0b1220;
+    --color-slate-100: #1b2740;
+    --color-slate-200: #2a3a5c;
+    --color-slate-300: #3d5178;
+    --color-slate-400: #8296b8;
+    --color-slate-500: #9db0d0;
+    --color-slate-600: #bccbe4;
+    --color-slate-700: #d6e0f0;
+    --color-slate-800: #e9eefa;
+    --color-slate-900: #f5f8ff;
+
+    /* Blue, lightened so a link or a focus ring is visible against a dark
+       surface. Buttons that use these as a *background* are handled below. */
+    --color-blue-50: #101d36;
+    --color-blue-100: #16294b;
+    --color-blue-200: #1f3a68;
+    --color-blue-300: #2b528f;
+    --color-blue-500: #5b93f5;
+    --color-blue-600: #5b93f5;
+    --color-blue-700: #6da4f7;
+    --color-blue-800: #8ab8f9;
+    --color-blue-900: #b3d0fb;
+}
+
+/*
+| The one thing turning the ramp over cannot do on its own.
+|
+| A handful of elements are a dark fill with white text — the primary button,
+| the details toggle. Those fills are now light, so the white text on them
+| would be invisible. Ink them dark instead. Two classes beat one, so these
+| win over .text-white without !important.
+*/
+[data-theme='dark'] .bg-blue-700.text-white,
+[data-theme='dark'] .bg-blue-800.text-white,
+[data-theme='dark'] .bg-slate-900.text-white,
+[data-theme='dark'] .bg-slate-600.text-white {
+    color: #0b1220;
+}
+
+/*
+| Modal backdrops are slate-900 at low opacity — a dark wash over the page.
+| Turned over, slate-900 is nearly white, which would wash the page out in
+| light instead. These are the only three opacities used.
+*/
+[data-theme='dark'] .bg-slate-900\/30 {
+    background-color: rgb(2 6 16 / 0.5);
+}
+
+[data-theme='dark'] .bg-slate-900\/40 {
+    background-color: rgb(2 6 16 / 0.6);
+}
+
+[data-theme='dark'] .bg-slate-900\/60 {
+    background-color: rgb(2 6 16 / 0.75);
+}
+
+/*
+| Form controls in the dark.
+|
+| The one place turning the palette over is not enough. @tailwindcss/forms
+| paints inputs, selects and textareas with a literal `background-color: #fff`
+| — not a theme variable — and sets no text colour at all, so the text inherits
+| the body's, which in dark mode is nearly white. White on white: the field is
+| there, the text is in it, and nobody can read a word.
+|
+| So these are stated outright. Every value is a theme variable, so they follow
+| whichever palette is in force rather than being a second set of colours to
+| keep in step.
+*/
+[data-theme='dark'] input:not([type='checkbox']):not([type='radio']):not([type='file']),
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+    background-color: var(--color-slate-100);
+    border-color: var(--color-slate-300);
+    color: var(--color-slate-900);
+}
+
+/* The list a native select drops down. color-scheme above makes the browser
+   draw its own chrome dark; this is for the ones that still ask. */
+[data-theme='dark'] option {
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-900);
+}
+
+[data-theme='dark'] ::placeholder {
+    color: var(--color-slate-400);
+    opacity: 1;
+}
+
+/* Unchecked only. The checked state is a solid fill of currentColor, which the
+   plugin sets at the same specificity — matching it here would paint over the
+   tick and leave a box that never looks ticked. */
+[data-theme='dark'] [type='checkbox']:not(:checked),
+[data-theme='dark'] [type='radio']:not(:checked) {
+    background-color: var(--color-slate-100);
+    border-color: var(--color-slate-300);
+}
+
+/* After the rule above, and more specific than it, so a disabled field still
+   reads as disabled rather than inheriting the ordinary field background. */
+[data-theme='dark'] input:disabled,
+[data-theme='dark'] select:disabled,
+[data-theme='dark'] textarea:disabled {
+    background-color: var(--color-slate-200);
+    color: var(--color-slate-400);
+}
+
+/*
+| Density.
+|
+| --spacing is the single unit every Tailwind spacing utility is derived from,
+| so moving it moves padding, gaps and margins together and in proportion.
+| Nothing else has to know.
+*/
+[data-density='compact'] {
+    --spacing: 0.21rem;
+}
+
+/*
+| Text size.
+|
+| Tailwind's type scale is in rem, so the root size carries it. Spacing is in
+| rem too, which is why a larger size loosens the layout as well as the type —
+| that is the intent, not a side effect.
+*/
+[data-text='small'] {
+    font-size: 15px;
+}
+
+[data-text='large'] {
+    font-size: 18px;
+}

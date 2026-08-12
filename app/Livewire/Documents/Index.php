@@ -3,6 +3,7 @@
 namespace App\Livewire\Documents;
 
 use App\Enums\DocumentStatus;
+use App\Livewire\Concerns\PaginatesByPreference;
 use App\Models\Department;
 use App\Models\Document;
 use App\Models\DocumentType;
@@ -20,7 +21,7 @@ use Livewire\WithPagination;
  */
 class Index extends Component
 {
-    use WithPagination;
+    use PaginatesByPreference, WithPagination;
 
     #[Url(as: 'q', except: '')]
     public string $search = '';
@@ -77,7 +78,7 @@ class Index extends Component
                     ->orWhere('origin_external_name', 'like', $term));
             })
             ->orderByDesc('id')
-            ->paginate(25);
+            ->paginate($this->perPage());
 
         return view('livewire.documents.index', [
             'documents' => $documents,

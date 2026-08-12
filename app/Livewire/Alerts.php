@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\PaginatesByPreference;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -16,7 +17,7 @@ use Livewire\WithPagination;
  */
 class Alerts extends Component
 {
-    use WithPagination;
+    use PaginatesByPreference, WithPagination;
 
     public function markAsRead(string $id): void
     {
@@ -33,7 +34,7 @@ class Alerts extends Component
     public function render()
     {
         return view('livewire.alerts', [
-            'alerts' => Auth::user()->notifications()->paginate(20),
+            'alerts' => Auth::user()->notifications()->paginate($this->perPage()),
             'unread' => Auth::user()->unreadNotifications()->count(),
         ])->layout('components.layouts.app', ['title' => 'Alerts']);
     }

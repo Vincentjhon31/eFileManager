@@ -19,8 +19,7 @@
         </div>
     @endunless
 
-    {{-- The same four counts that drive My Desk, and that will light the doors
-         on the building map. --}}
+    {{-- The same four counts that drive My Desk. --}}
     @php
         $tiles = [
             ['To receive', $counts['incoming'], 'incoming', 'amber'],

@@ -173,6 +173,73 @@ class FileStorageService
         return $folder;
     }
 
+    /**
+     * Put a folder under a different parent, or back at the top level.
+     *
+     * Only parent_id changes. Stored bytes are addressed by a UUID under the
+     * owning office and never by folder (see pathFor), so nothing on disk moves
+     * and no file's storage path is rewritten — which is what makes a subtree
+     * move a single safe update rather than a migration.
+     */
+    public function moveFolder(Folder $folder, ?Folder $target, User $by): Folder
+    {
+        if ($folder->is_system) {
+            throw DriveException::systemFolder($folder);
+        }
+
+        if ($target && $target->department_id !== $folder->department_id) {
+            throw DriveException::notYourOffice($target);
+        }
+
+        // Into itself or into something already beneath it would cut the whole
+        // subtree loose from the root: still in the table, reachable by no
+        // breadcrumb and listed by no folder. Refuse rather than repair later.
+        if ($target && $this->isSelfOrDescendant($target, $folder)) {
+            throw DriveException::folderIntoItself($folder);
+        }
+
+        if ($folder->parent_id === $target?->getKey()) {
+            return $folder;
+        }
+
+        $this->assertNameIsFree($folder->department, $target, $folder->name, $folder->getKey());
+
+        $from = $folder->parent?->name;
+        $folder->update(['parent_id' => $target?->getKey()]);
+
+        $this->audit->log(
+            event: 'folder.moved',
+            subject: $folder,
+            properties: ['from' => $from, 'to' => $target?->name],
+            description: sprintf(
+                'Moved folder “%s” to %s.',
+                $folder->name,
+                $target ? "“{$target->name}”" : 'the top level',
+            ),
+            actor: $by,
+        );
+
+        return $folder;
+    }
+
+    /** Whether $candidate is $folder itself, or sits somewhere beneath it. */
+    private function isSelfOrDescendant(Folder $candidate, Folder $folder): bool
+    {
+        $node = $candidate;
+
+        // Bounded like breadcrumbs(): the ceiling guards against a cycle left
+        // by an earlier bad write, not against legitimate depth.
+        for ($i = 0; $i < 20 && $node; $i++) {
+            if ($node->getKey() === $folder->getKey()) {
+                return true;
+            }
+
+            $node = $node->parent;
+        }
+
+        return false;
+    }
+
     /** Only an empty folder can go, and "empty" includes the trash. */
     public function deleteFolder(Folder $folder, User $by): void
     {

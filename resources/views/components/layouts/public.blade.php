@@ -78,6 +78,11 @@
         </nav>
     </header>
 
+    {{-- Only the home page fills this — a full-width band above the
+         constrained column, the same way the header's background already
+         spans edge to edge while its content stays in the 5xl column. --}}
+    {{ $hero ?? '' }}
+
     <main id="content" class="mx-auto w-full max-w-5xl grow px-4 py-8 sm:px-6">
         {{ $slot }}
     </main>

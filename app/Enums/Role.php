@@ -61,6 +61,9 @@ enum Role: string
             self::DepartmentAdmin => [
                 Permission::UsersManageOwnDepartment,
                 Permission::AuditViewOwnDepartment,
+                // Their own office's entries only; publishing to every office
+                // or to the public needs SettingsManage on top.
+                Permission::AppsManage,
                 Permission::DocumentsCreate,
                 Permission::DocumentsRoute,
                 Permission::DocumentsReceive,

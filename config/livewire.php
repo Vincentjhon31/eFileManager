@@ -140,7 +140,12 @@ return [
 
     'temporary_file_upload' => [
         'disk' => env('LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK'), // Example: 'local', 's3'             | Default: 'default'
-        'rules' => null,                                      // Example: ['file', 'mimes:png,jpg'] | Default: ['required', 'file', 'max:12288'] (12MB)
+        // Left at null this defaults to ['required', 'file', 'max:12288'] (12MB)
+        // — a limit Livewire enforces on its own temporary upload, before the
+        // drive's own validation (config('drive.max_upload_mb'), up to 50MB)
+        // ever runs. Anything between 12MB and the drive limit — most videos
+        // — would be rejected here first. Kept in sync with the same env var.
+        'rules' => ['required', 'file', 'max:'.((int) env('DRIVE_MAX_UPLOAD_MB', 50) * 1024)],
         'directory' => null,                                  // Example: 'tmp'                     | Default: 'livewire-tmp'
         'middleware' => null,                                 // Example: 'throttle:5,1'            | Default: 'throttle:60,1'
         'preview_mimes' => [                                  // Supported file types for temporary pre-signed file URLs...

@@ -26,8 +26,12 @@ Artisan::command('inspire', function () {
 
 Schedule::command(SendDeskDigests::class)
     ->weekdays()
-    ->dailyAt('07:30')
-    ->timezone('Asia/Manila')
+    // Settable in Settings → System, which overrides config at boot. The
+    // command checks digest.enabled itself rather than the schedule skipping
+    // it, so a manual run says plainly that it is switched off instead of
+    // appearing to work and sending nothing.
+    ->dailyAt(config('digest.time', '07:30'))
+    ->timezone(config('app.display_timezone', 'Asia/Manila'))
     // The office is small and the mail server is shared. If a run is somehow
     // still going an hour later, do not start a second one on top of it.
     ->withoutOverlapping(60)

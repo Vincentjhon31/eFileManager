@@ -15,6 +15,24 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google sign-in
+    |--------------------------------------------------------------------------
+    |
+    | Whether employees may sign in with, and link, a Google account. Settable
+    | by an administrator in Settings → System, which overrides this at boot.
+    |
+    | Credentials are still required on top of it (see config/services.php):
+    | this switch turns off a feature that is configured, it cannot turn on one
+    | that is not. Password sign-in has no equivalent switch on purpose —
+    | turning it off on a system where Google was misconfigured would lock every
+    | employee out of a government records system with no way back in.
+    |
+    */
+
+    'google_enabled' => (bool) env('AUTH_GOOGLE_ENABLED', true),
+
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),

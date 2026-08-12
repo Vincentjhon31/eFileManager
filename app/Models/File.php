@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Bytes;
 use Database\Factories\FileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -112,25 +113,9 @@ class File extends Model
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * "2.4 MB".
-     *
-     * Written out rather than using Number::fileSize, which needs the intl
-     * extension. Requiring an extension across the whole deployment — and
-     * discovering it is missing on the host — is a poor trade for one label.
-     */
     public function humanSize(): string
     {
-        $bytes = max(0, (int) $this->size);
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $unit = 0;
-
-        while ($bytes >= 1024 && $unit < count($units) - 1) {
-            $bytes /= 1024;
-            $unit++;
-        }
-
-        return round($bytes, $unit >= 2 ? 1 : 0).' '.$units[$unit];
+        return Bytes::human((int) $this->size);
     }
 
     /** Whether the browser can be trusted to display this in a sandbox. */
@@ -150,6 +135,8 @@ class File extends Model
         return match (true) {
             $this->mime === 'application/pdf' => 'PDF',
             str_starts_with($this->mime, 'image/') => 'Image',
+            str_starts_with($this->mime, 'video/') => 'Video',
+            str_starts_with($this->mime, 'audio/') => 'Audio',
             str_contains($this->mime, 'spreadsheet'), str_contains($this->mime, 'excel') => 'Sheet',
             str_contains($this->mime, 'word'), str_contains($this->mime, 'opendocument.text') => 'Document',
             str_contains($this->mime, 'presentation') => 'Slides',

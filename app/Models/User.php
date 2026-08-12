@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UserPreferences;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -26,7 +27,7 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable([
     'employee_no', 'name', 'email', 'password', 'department_id',
-    'position', 'google_id', 'is_active',
+    'position', 'phone', 'google_id', 'is_active', 'preferences',
 ])]
 #[Hidden(['password', 'remember_token', 'google_id'])]
 class User extends Authenticatable
@@ -39,9 +40,25 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'tour_completed_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'preferences' => 'array',
         ];
+    }
+
+    /**
+     * How this employee has asked to be shown things.
+     *
+     * Always an object, never a raw array: the column may be null for anyone
+     * who has never opened Settings, may have been written by an older version
+     * of the app, and is the sort of thing that ends up hand-edited. Reading it
+     * through UserPreferences means every caller gets a checked value with a
+     * sensible default instead of whatever happens to be in the JSON.
+     */
+    public function preferences(): UserPreferences
+    {
+        return UserPreferences::fromArray($this->preferences);
     }
 
     public function department(): BelongsTo
@@ -86,5 +103,11 @@ class User extends Authenticatable
     {
         return $this->department !== null
             && $this->department->head_user_id === $this->id;
+    }
+
+    /** Whether the sidebar tour should offer itself unprompted. */
+    public function needsTour(): bool
+    {
+        return $this->tour_completed_at === null;
     }
 }

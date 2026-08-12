@@ -8,8 +8,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Megabytes. A scanned twenty-page memorandum is a few MB; a scanned
-    | ordinance with annexes can reach thirty. Fifty leaves room without
-    | inviting somebody to park a video here.
+    | ordinance with annexes can reach thirty. Fifty is tight for a video
+    | clip — raise DRIVE_MAX_UPLOAD_MB if offices need to keep longer ones.
     |
     | This is only the application's limit. PHP has its own, and PHP's wins
     | silently — an upload larger than post_max_size never reaches Laravel at
@@ -51,6 +51,8 @@ return [
         'odt', 'ods', 'odp',
         'txt', 'csv', 'rtf',
         'zip',
+        'mp4', 'webm', 'mov',
+        'mp3', 'wav', 'ogg', 'm4a',
     ],
 
     /*
@@ -59,8 +61,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | Everything else downloads. Content-Disposition: inline hands the file to
-    | whatever the browser does with that type, so this list is limited to the
-    | two it handles in a sandbox: its PDF viewer and its image decoder.
+    | whatever the browser does with that type, so this list is limited to what
+    | it handles in a sandbox: its PDF viewer, its image decoder, and — for
+    | mp4/webm/mp3/wav/ogg specifically — the <video>/<audio> elements. .mov
+    | and .m4a are left off this list even though both are accepted for
+    | upload: their mime types (video/quicktime, and audio/mp4 or similar
+    | depending on the server's file-info library) aren't consistent or
+    | reliably playable inline across browsers, so those two still download.
     |
     */
 
@@ -71,6 +78,13 @@ return [
         'image/gif',
         'image/webp',
         'image/bmp',
+        'video/mp4',
+        'video/webm',
+        'audio/mpeg',
+        'audio/mp3',
+        'audio/wav',
+        'audio/x-wav',
+        'audio/ogg',
     ],
 
 ];

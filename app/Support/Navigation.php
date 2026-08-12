@@ -15,7 +15,15 @@ use Illuminate\Support\Facades\Route;
  */
 class Navigation
 {
-    /** @return array<int, array{label: string, url: string, active: bool}> */
+    /**
+     * Two groups, not twelve flat links: the sidebar reflects the same line
+     * every permission check already draws. "work" is what any onboarded
+     * employee touches; "admin" only ever appears for someone who can
+     * actually act on it, so an ordinary clerk never sees a section heading
+     * for screens that would refuse them anyway.
+     *
+     * @return array<int, array{label: string, url: string, active: bool, group: string, icon: string}>
+     */
     public static function forCurrentUser(): array
     {
         $user = Auth::user();
@@ -29,6 +37,8 @@ class Navigation
                 'label' => 'Dashboard',
                 'route' => 'dashboard',
                 'visible' => true,
+                'group' => 'work',
+                'icon' => 'dashboard',
             ],
             [
                 'label' => 'My Desk',
@@ -37,6 +47,8 @@ class Navigation
                     Permission::DocumentsViewOwnDepartment->value,
                     Permission::DocumentsViewAllDepartments->value,
                 ]),
+                'group' => 'work',
+                'icon' => 'desk',
             ],
             [
                 'label' => 'Documents',
@@ -48,29 +60,29 @@ class Navigation
                     Permission::DocumentsViewOwnDepartment->value,
                     Permission::DocumentsViewAllDepartments->value,
                 ]),
+                'group' => 'work',
+                'icon' => 'documents',
+            ],
+            [
+                'label' => 'Workspace',
+                'route' => 'workspace',
+                'visible' => $user->department_id !== null,
+                'group' => 'work',
+                'icon' => 'workspace',
             ],
             [
                 'label' => 'Drive',
                 'route' => 'drive',
                 'visible' => $user->department_id !== null,
-            ],
-            [
-                'label' => 'Building',
-                'route' => 'building',
-                'visible' => $user->canAny([
-                    Permission::DocumentsViewOwnDepartment->value,
-                    Permission::DocumentsViewAllDepartments->value,
-                ]),
+                'group' => 'work',
+                'icon' => 'drive',
             ],
             [
                 'label' => 'Offices',
                 'route' => 'admin.departments.index',
                 'visible' => $user->can(Permission::DepartmentsManage->value),
-            ],
-            [
-                'label' => 'Rooms',
-                'route' => 'admin.rooms.index',
-                'visible' => $user->can(Permission::DepartmentsManage->value),
+                'group' => 'admin',
+                'icon' => 'offices',
             ],
             [
                 'label' => 'Users',
@@ -79,16 +91,29 @@ class Navigation
                     Permission::UsersManageAll->value,
                     Permission::UsersManageOwnDepartment->value,
                 ]),
+                'group' => 'admin',
+                'icon' => 'users',
+            ],
+            [
+                'label' => 'Workspace apps',
+                'route' => 'admin.apps.index',
+                'visible' => $user->can(Permission::AppsManage->value),
+                'group' => 'admin',
+                'icon' => 'apps',
             ],
             [
                 'label' => 'Notices',
                 'route' => 'admin.announcements.index',
                 'visible' => $user->can(Permission::PublicPublish->value),
+                'group' => 'admin',
+                'icon' => 'notices',
             ],
             [
                 'label' => 'Disclosure board',
                 'route' => 'admin.disclosures.index',
                 'visible' => $user->can(Permission::PublicPublish->value),
+                'group' => 'admin',
+                'icon' => 'disclosure',
             ],
             [
                 'label' => 'Audit trail',
@@ -97,6 +122,15 @@ class Navigation
                     Permission::AuditViewAllDepartments->value,
                     Permission::AuditViewOwnDepartment->value,
                 ]),
+                'group' => 'admin',
+                'icon' => 'audit',
+            ],
+            [
+                'label' => 'Storage & Backups',
+                'route' => 'admin.storage.index',
+                'visible' => $user->can(Permission::SettingsManage->value),
+                'group' => 'admin',
+                'icon' => 'storage',
             ],
         ];
 
@@ -106,6 +140,8 @@ class Navigation
                 'label' => $item['label'],
                 'url' => route($item['route']),
                 'active' => request()->routeIs($item['active'] ?? $item['route'].'*'),
+                'group' => $item['group'],
+                'icon' => $item['icon'],
             ])
             ->values()
             ->all();

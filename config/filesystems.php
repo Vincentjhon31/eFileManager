@@ -62,6 +62,20 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Database and file backups. NOT web-reachable, same as 'documents':
+         * every read must pass through BackupController, which authorises
+         * against Permission::SettingsManage first.
+         */
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/backups'),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

@@ -26,6 +26,8 @@ class PublicPortalController extends Controller
 {
     public function home(): View
     {
+        $shelves = $this->shelfCounts();
+
         return view('public.home', [
             'pinned' => Announcement::query()->live()->where('is_pinned', true)
                 ->forTheFrontPage()->with('department')->limit(3)->get(),
@@ -36,7 +38,11 @@ class PublicPortalController extends Controller
             'recentDisclosures' => PublicFile::query()->live()->onTheBoard()
                 ->with('file')->orderByDesc('published_at')->limit(5)->get(),
 
-            'shelves' => $this->shelfCounts(),
+            'shelves' => $shelves,
+
+            // For the hero's "at a glance" line — real counts, not decoration.
+            'noticeCount' => Announcement::query()->live()->forTheFrontPage()->count(),
+            'disclosureCount' => array_sum(array_column($shelves, 'count')),
         ]);
     }
 

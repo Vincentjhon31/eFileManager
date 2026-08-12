@@ -24,15 +24,23 @@ use Illuminate\Support\Collection;
 class SendDeskDigests extends Command
 {
     protected $signature = 'documents:send-desk-digests
-                            {--due-within=2 : Days ahead to count a document as needing attention}
+                            {--due-within= : Days ahead to count a document as needing attention (default: the digest setting)}
                             {--dry-run : List who would be written to without sending anything}';
 
     protected $description = 'Send each employee a summary of what is waiting on their desk';
 
     public function handle(): int
     {
-        $dueWithin = max(0, (int) $this->option('due-within'));
+        // The option wins when given, so a one-off run can still be told what
+        // to count; otherwise the municipality's setting decides.
+        $dueWithin = max(0, (int) ($this->option('due-within') ?? config('digest.due_within', 2)));
         $dryRun = (bool) $this->option('dry-run');
+
+        if (! config('digest.enabled', true)) {
+            $this->info('The morning digest is switched off for the whole municipality (Settings → System).');
+
+            return self::SUCCESS;
+        }
 
         // Only offices actually using the system. Staff of an office that has
         // not onboarded have nothing to act on here, and their documents are
@@ -81,8 +89,21 @@ class SendDeskDigests extends Command
     /** Null when this person's desk is clear and there is nothing worth saying. */
     private function digestFor(User $user, int $dueWithin): ?DeskDigest
     {
+        $preferences = $user->preferences();
+
+        // Somebody who has turned the digest off in Settings → Notifications
+        // gets nothing, however full their desk is.
+        if (! $preferences->wantsDigestEmail()) {
+            return null;
+        }
+
         $officeId = $user->department_id;
-        $officeSummary = $user->can(Permission::DocumentsReceive->value);
+
+        // The office-wide figures need both the standing to see them and the
+        // wish to: a clerk who only wants their own papers keeps the message
+        // short, and for anyone who cannot receive there is no section anyway.
+        $officeSummary = $user->can(Permission::DocumentsReceive->value)
+            && $preferences->wantsOfficeSummary();
 
         /** @var Collection<int, Document> $mine */
         $mine = Document::query()

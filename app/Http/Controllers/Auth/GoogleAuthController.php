@@ -25,11 +25,22 @@ class GoogleAuthController extends Controller
 {
     public function redirect(): RedirectResponse
     {
+        abort_unless($this->enabled(), 404);
+
         return Socialite::driver('google')->redirect();
     }
 
     public function callback(AuditLogger $audit): RedirectResponse
     {
+        abort_unless($this->enabled(), 404);
+
+        // Signed in already means this is a linking attempt from Settings →
+        // Security, not a sign-in. Different outcome, different failure
+        // messages, and it must not be able to swap which account is signed in.
+        if ($existing = Auth::user()) {
+            return $this->link($existing, $audit);
+        }
+
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (Throwable) {
@@ -84,5 +95,70 @@ class GoogleAuthController extends Controller
         $audit->log('user.login', $user, ['method' => 'google'], 'Signed in with Google.', $user);
 
         return redirect()->intended(route('dashboard'));
+    }
+
+    /**
+     * Attach a Google identity to the account already signed in.
+     *
+     * Two refusals matter here. A Google identity already attached to another
+     * account is rejected rather than moved, or one employee could quietly take
+     * over another's sign-in; and the address is not required to match the
+     * account's email, because a municipal Gmail and an official gov.ph address
+     * are routinely different for the same person.
+     */
+    private function link(User $user, AuditLogger $audit): RedirectResponse
+    {
+        try {
+            $googleUser = Socialite::driver('google')->user();
+        } catch (Throwable) {
+            return redirect()
+                ->route('settings.security')
+                ->withErrors(['google' => 'Google could not be reached. Nothing was linked — try again.']);
+        }
+
+        $takenBy = User::where('google_id', $googleUser->getId())
+            ->whereKeyNot($user->getKey())
+            ->first();
+
+        if ($takenBy) {
+            $audit->log(
+                event: 'user.google_link_rejected',
+                subject: $user,
+                properties: ['reason' => 'already linked to another account'],
+                description: 'Tried to link a Google account that belongs to somebody else.',
+                actor: $user,
+            );
+
+            return redirect()
+                ->route('settings.security')
+                ->withErrors(['google' => 'That Google account is already linked to another account in this system.']);
+        }
+
+        $user->forceFill(['google_id' => $googleUser->getId()])->saveQuietly();
+
+        $audit->log(
+            event: 'user.google_linked',
+            subject: $user,
+            properties: ['google_email' => $googleUser->getEmail()],
+            description: 'Linked a Google account from their settings.',
+            actor: $user,
+        );
+
+        return redirect()
+            ->route('settings.security')
+            ->with('status', 'Google sign-in linked. You can now sign in either way.');
+    }
+
+    /**
+     * Configured on the server, and switched on by the municipality.
+     *
+     * Both are needed: credentials without the setting means an administrator
+     * has deliberately turned it off, and the setting without credentials would
+     * be a button that leads nowhere.
+     */
+    private function enabled(): bool
+    {
+        return filled(config('services.google.client_id'))
+            && (bool) config('auth.google_enabled', true);
     }
 }

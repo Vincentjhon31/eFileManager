@@ -167,6 +167,26 @@ class Folder extends Model
         return $trail;
     }
 
+    /**
+     * The address that opens this folder in the drive.
+     *
+     * Exists so a folder can be a plain link rather than a click handler.
+     * Browser::$folderId is a #[Url] property, so the query string alone is
+     * enough to open it — which means opening a folder keeps working when the
+     * selection layer, or JavaScript altogether, does not.
+     *
+     * The view rides along because the same folder is reachable from "My
+     * office" and from "Shared with me", and a link that dropped it would land
+     * the reader in the wrong tab.
+     */
+    public function openUrl(?string $view = null): string
+    {
+        return route('drive', array_filter([
+            'folderId' => $this->getKey(),
+            'view' => $view === 'office' ? null : $view,
+        ]));
+    }
+
     public function isRoot(): bool
     {
         return $this->parent_id === null;

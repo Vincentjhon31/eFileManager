@@ -1,7 +1,9 @@
 <?php
 
+use App\Support\UserPreferences;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,6 +14,12 @@ use Illuminate\Support\Carbon;
 | user must be converted to Philippine time first. Use these helpers rather
 | than calling ->format() directly on a model attribute, otherwise the value
 | renders in UTC and a document received at 8:30 AM shows as 12:30 AM.
+|
+| With no format given they use the signed-in employee's choice from Settings
+| → Preferences, which is how that preference reaches every screen at once
+| without a single view having to know it exists. Pass a format explicitly
+| where the shape matters more than the reader's taste — a printed routing
+| slip, a filename, an audit export.
 |
 */
 
@@ -25,17 +33,33 @@ if (! function_exists('ph_tz')) {
     }
 }
 
+if (! function_exists('ph_preferences')) {
+    /**
+     * The signed-in employee's display preferences, or the defaults.
+     *
+     * Defaults matter here rather than being a nicety: these helpers are also
+     * called from the console — the digest, in particular — where there is no
+     * authenticated user at all.
+     */
+    function ph_preferences(): UserPreferences
+    {
+        return Auth::user()?->preferences() ?? UserPreferences::fromArray(null);
+    }
+}
+
 if (! function_exists('ph_datetime')) {
     /**
      * Render a timestamp in Philippine time, e.g. "06 Aug 2026, 8:30 AM".
      */
-    function ph_datetime(CarbonInterface|string|null $value, string $format = 'd M Y, g:i A'): ?string
+    function ph_datetime(CarbonInterface|string|null $value, ?string $format = null): ?string
     {
         if ($value === null) {
             return null;
         }
 
-        return Carbon::parse($value)->timezone(ph_tz())->format($format);
+        return Carbon::parse($value)
+            ->timezone(ph_tz())
+            ->format($format ?? ph_preferences()->dateTimeFormat());
     }
 }
 
@@ -43,9 +67,9 @@ if (! function_exists('ph_date')) {
     /**
      * Render a date in Philippine time, e.g. "06 Aug 2026".
      */
-    function ph_date(CarbonInterface|string|null $value, string $format = 'd M Y'): ?string
+    function ph_date(CarbonInterface|string|null $value, ?string $format = null): ?string
     {
-        return ph_datetime($value, $format);
+        return ph_datetime($value, $format ?? ph_preferences()->dateFormat());
     }
 }
 

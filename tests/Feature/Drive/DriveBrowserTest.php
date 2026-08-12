@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\DocumentRoutingService;
 use App\Services\FileStorageService;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -154,6 +155,47 @@ class DriveBrowserTest extends TestCase
             ->assertDontSee('Legal opinions');
     }
 
+    /**
+     * open() populates public properties from whatever id it is given, and a
+     * Livewire action is reachable directly with any id regardless of what
+     * this user's own listings ever showed them. An Internal-visibility
+     * folder is the sharp case: the clerk can legitimately SEE it under
+     * "Shared with me", so it is not blocked by visibleTo() alone — only the
+     * authorize('update', ...) call stands between them and writing this
+     * other office's name and visibility level into their own form state.
+     */
+    public function test_opening_a_panel_for_another_offices_visible_folder_is_still_refused(): void
+    {
+        $theirFolder = $this->drive->createFolder(
+            $this->legal, null, 'Contract templates', FolderVisibility::Internal, $this->staff($this->legal),
+        );
+
+        Livewire::actingAs($this->clerk)
+            ->test(Browser::class)
+            ->call('open', 'rename-folder', $theirFolder->id)
+            ->assertForbidden();
+
+        Livewire::actingAs($this->clerk)
+            ->test(Browser::class)
+            ->call('open', 'visibility', $theirFolder->id)
+            ->assertForbidden();
+    }
+
+    /** A folder invisible to this office entirely (not shared) is refused before authorization even runs. */
+    public function test_opening_a_panel_for_another_offices_private_folder_is_not_found(): void
+    {
+        $theirFolder = $this->drive->createFolder(
+            $this->legal, null, 'Opinions', FolderVisibility::Department, $this->staff($this->legal),
+        );
+        $theirFile = $this->drive->store($this->upload('confidential-opinion.pdf'), $theirFolder, $this->staff($this->legal));
+
+        $this->expectException(ModelNotFoundException::class);
+
+        Livewire::actingAs($this->clerk)
+            ->test(Browser::class)
+            ->call('open', 'rename-file', $theirFile->id);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Trash
@@ -177,6 +219,26 @@ class DriveBrowserTest extends TestCase
             ->assertDontSee('ordinance-41.pdf');
 
         $this->assertNull($file->fresh()->deleted_at);
+    }
+
+    /**
+     * FilePolicy scopes both routes through visibleTo(), which excludes
+     * soft-deleted rows by default — a trashed file has no working preview or
+     * download link, so the listing must not render one that 403s on click.
+     */
+    public function test_a_trashed_file_is_not_linked_to_preview_or_download(): void
+    {
+        $folder = $this->drive->createFolder($this->mayor, null, 'Ordinances', FolderVisibility::Department, $this->clerk);
+        $file = $this->drive->store($this->upload('ordinance-41.pdf'), $folder, $this->clerk);
+        $this->drive->trash($file, $this->clerk);
+
+        $html = Livewire::actingAs($this->clerk)
+            ->test(Browser::class)
+            ->call('switchView', 'trash')
+            ->html();
+
+        $this->assertStringNotContainsString(route('files.download', $file), $html);
+        $this->assertStringNotContainsString(route('files.preview', $file), $html);
     }
 
     public function test_an_ordinary_clerk_is_not_offered_permanent_destruction(): void

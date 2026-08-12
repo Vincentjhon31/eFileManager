@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Enums\Permission;
 use App\Enums\Role as RoleEnum;
+use App\Livewire\Concerns\PaginatesByPreference;
 use App\Models\Department;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -27,7 +28,7 @@ use Livewire\WithPagination;
  */
 class Users extends Component
 {
-    use WithPagination;
+    use PaginatesByPreference, WithPagination;
 
     #[Url(as: 'q', except: '')]
     public string $search = '';
@@ -273,7 +274,7 @@ class Users extends Component
                     ->orWhere('employee_no', 'like', $term));
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate($this->perPage());
 
         return view('livewire.admin.users', [
             'users' => $users,

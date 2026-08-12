@@ -79,6 +79,14 @@ class DriveException extends RuntimeException
         return new self('A file cannot be moved into another office\'s folders.');
     }
 
+    public static function folderIntoItself(Folder $folder): self
+    {
+        return new self(sprintf(
+            '“%s” cannot be moved into itself or into one of the folders inside it.',
+            $folder->name,
+        ));
+    }
+
     public static function attachedToDocuments(File $file, int $count): self
     {
         return new self(sprintf(

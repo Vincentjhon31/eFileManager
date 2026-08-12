@@ -56,6 +56,17 @@ enum Permission: string
      */
     case PublicPublish = 'public.publish';
 
+    /*
+     * Publishing a system into the workspace catalog.
+     *
+     * Held by department administrators as well as MIS, because the catalog is
+     * only useful if the office that runs a system can list it themselves. The
+     * scope is still bounded: this permission publishes to one's own office.
+     * Reaching every office, or the public, additionally requires
+     * SettingsManage — see WorkspaceAppPolicy.
+     */
+    case AppsManage = 'apps.manage';
+
     // Settings
     case SettingsManage = 'settings.manage';
 
@@ -73,6 +84,7 @@ enum Permission: string
             self::DocumentsViewAllDepartments => 'View all offices\' documents',
             self::DocumentsViewConfidential => 'Open confidential documents in own office',
             self::PublicPublish => 'Publish to the public portal',
+            self::AppsManage => 'Publish apps to the workspace catalog',
             self::AuditViewOwnDepartment => 'View own office audit trail',
             self::AuditViewAllDepartments => 'View full audit trail',
             self::SettingsManage => 'Manage system settings',
