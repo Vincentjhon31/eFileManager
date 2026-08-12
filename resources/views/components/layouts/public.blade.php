@@ -41,7 +41,7 @@
         @vite(['resources/css/app.css', 'resources/css/pixel.css'])
     @endif
 </head>
-<body class="px-page flex h-full flex-col antialiased">
+<body class="px-page antialiased">
 
     <a href="#content"
        class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[80] focus:bg-blue-700 focus:px-4 focus:py-2 focus:text-white">
@@ -49,8 +49,13 @@
     </a>
 
     @isset($world)
-        {{-- The town is the masthead. --}}
-        {{ $world }}
+        {{-- The town is the masthead, and it gets the whole first screen: a
+             half-height stage had to crop the sky to keep the ground, and the
+             sky is where the clouds and the birds are. The tab strip and the
+             notices follow it in ordinary flow, one scroll down. --}}
+        <div class="px-screen">
+            {{ $world }}
+        </div>
     @else
         <header class="px-head">
             <div class="px-head-in">
@@ -93,7 +98,7 @@
         </ul>
     </nav>
 
-    <main id="content" class="px-wrap grow">
+    <main id="content" class="px-wrap">
         {{ $slot }}
     </main>
 

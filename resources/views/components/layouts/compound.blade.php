@@ -28,31 +28,35 @@
          and the drawn compound together. --}}
     @vite(['resources/css/app.css', 'resources/css/world.css', 'resources/js/world.js'])
 </head>
-<body class="px-page flex h-full flex-col antialiased">
+<body class="px-page antialiased">
 
     <a href="#content"
        class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[80] focus:bg-blue-700 focus:px-4 focus:py-2 focus:text-white">
         Skip to the list of screens
     </a>
 
-    <header class="px-head">
-        <div class="px-head-in">
-            <span class="px-seal" aria-hidden="true">{{ config('lgu.code') }}</span>
-            <span class="px-brand-text">
-                <b>The Compound</b>
-                <span>{{ config('lgu.name') }}</span>
-            </span>
+    {{-- The strip and the compound together are exactly one viewport, so the
+         drawn hall gets everything the header does not — see .px-screen. --}}
+    <div class="px-screen">
+        <header class="px-head">
+            <div class="px-head-in">
+                <span class="px-seal" aria-hidden="true">{{ config('lgu.code') }}</span>
+                <span class="px-brand-text">
+                    <b>The Compound</b>
+                    <span>{{ config('lgu.name') }}</span>
+                </span>
 
-            <span class="px-grow"></span>
+                <span class="px-grow"></span>
 
-            {{-- The way out. This screen is the scenic route, and somebody who has
-                 seen enough of it should never have to hunt for the ordinary
-                 one. --}}
-            <a href="{{ route('dashboard') }}" class="px-btn go">Skip to Dashboard</a>
-        </div>
-    </header>
+                {{-- The way out. This screen is the scenic route, and somebody who
+                     has seen enough of it should never have to hunt for the
+                     ordinary one. --}}
+                <a href="{{ route('dashboard') }}" class="px-btn go">Skip to Dashboard</a>
+            </div>
+        </header>
 
-    {{ $world }}
+        {{ $world }}
+    </div>
 
     {{--
         The same destinations as a plain list, below the drawing.
@@ -62,7 +66,7 @@
         and would still rather read a list, which on a screen whose whole point is
         navigation is a reasonable thing to want.
     --}}
-    <main id="content" class="px-wrap grow">
+    <main id="content" class="px-wrap">
         <h2 class="px-eyebrow">Every screen you can open</h2>
 
         <ul class="px-grid three">

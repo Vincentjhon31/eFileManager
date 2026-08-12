@@ -74,6 +74,35 @@
 |
 */
 
+/*
+| The first screen.
+|
+| Wraps whatever chrome sits above the town plus the town itself, and is exactly
+| one viewport tall — so the stage gets everything left over after the header,
+| without anybody having to hardcode the header's height into a calc() that then
+| goes stale the first time its padding changes.
+|
+| The page continues below it in ordinary flow. That is the point: the town gets
+| the whole screen, and the notices are a scroll away rather than sharing it.
+*/
+.px-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    /* Where it is supported, the dynamic unit — so a phone's collapsing address
+       bar does not leave a strip of page showing under the town. */
+    height: 100dvh;
+    min-height: 420px;
+}
+
+.px-screen .world-stage {
+    flex: 1 1 auto;
+    height: auto;
+    /* Without this a flex item refuses to shrink below its content, and the
+       stage would push the page taller than the viewport it is measuring. */
+    min-height: 0;
+}
+
 .world-stage {
     position: relative;
     overflow: hidden;

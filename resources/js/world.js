@@ -1158,26 +1158,78 @@ function layout(places) {
  * whole of the parallax: the mountains are far away, so they slide a third as
  * far as the town in front of them.
  */
-function drawSky(c, t, w, panX) {
-    r(c, 0, 0, w, 174, C.sky);
-    r(c, 0, 0, w, 54, C.skyHigh);
+function drawSky(c, t, w, panX, top) {
+    /*
+     * Painted from `top`, the highest row the canvas can actually show, rather
+     * than from zero. On a full-height stage that is a long way above the world's
+     * own top edge, and the gradient has to reach up into it or the page ends in
+     * a band of nothing.
+     */
+    /*
+     * The sky, as stepped bands from the zenith down to the horizon.
+     *
+     * It used to be two flat fills, which at the old half-height was a subtle
+     * edge near the top and at full height is a hard line straight across the
+     * middle of the page. Five bands with a dithered row at each join reads as
+     * depth instead — and dithering a boundary rather than blending it is the
+     * pixel-art answer to a gradient, since a real gradient would be the one
+     * smooth thing in a picture made of squares.
+     *
+     * Deeper and more saturated overhead, paler towards the horizon, which is the
+     * way round the atmosphere actually does it.
+     */
+    const BANDS = ['#6fadc4', '#7fb8cd', C.sky, '#a1d2de', '#b5dde6'];
+    const skyDepth = 174 - top;
+
+    BANDS.forEach((tone, i) => {
+        const from = Math.round(top + (skyDepth * i) / BANDS.length);
+        const to = Math.round(top + (skyDepth * (i + 1)) / BANDS.length);
+
+        r(c, 0, from, w, to - from, tone);
+
+        /* Two dithered rows into the band above, so the join is a texture rather
+           than a line. */
+        if (i > 0) {
+            for (let d = 0; d < 2; d++) {
+                for (let x = (i + d) % 2; x < w; x += 2) {
+                    r(c, x, from + d, 1, 1, BANDS[i - 1]);
+                }
+            }
+        }
+    });
+
     r(c, 0, 174, w, WORLD_H - 174, C.haze);
 
-    /* Clouds. Two rows drifting at different speeds, each cloud a few stacked
-       rectangles rather than a blob. */
+    /*
+     * Clouds, spread over whatever sky there is.
+     *
+     * The two rows used to sit at fixed rows 20 and 52, which is fine at one
+     * stage height and wrong at every other: on a short stage those rows are
+     * above the crop and the sky is empty, on a tall one they huddle against the
+     * horizon with a great deal of blank blue above them. Both bands are placed
+     * as fractions of the available depth instead, so the sky is populated
+     * whatever shape it turns out to be.
+     */
+    const depth = 150 - top;
     const rows = [
-        { y: 20, speed: 0.014, scale: 1.3, count: 5, par: 0.15 },
-        { y: 52, speed: 0.008, scale: 1, count: 4, par: 0.28 },
+        { at: 0.18, speed: 0.014, scale: 1.35, count: 5, par: 0.15 },
+        { at: 0.46, speed: 0.008, scale: 1, count: 4, par: 0.28 },
+        { at: 0.72, speed: 0.005, scale: 0.8, count: 3, par: 0.4 },
     ];
 
     for (const row of rows) {
+        const baseY = Math.round(top + depth * row.at);
+
         for (let i = 0; i < row.count; i++) {
             const span = w + 260;
-            const seed = noise(i * 7 + row.y);
+            const seed = noise(i * 7 + row.at * 100);
             const raw = seed * span + t * row.speed - panX * row.par;
             const cx = ((raw % span) + span) % span - 130;
-            const cy = row.y + Math.round(seed * 14);
+            const cy = baseY + Math.round(seed * 14);
             const cw = Math.round((26 + seed * 30) * row.scale);
+
+            /* Below the treeline it would be fog, not cloud. */
+            if (cy > 168) continue;
 
             c.fillStyle = C.cloud;
             c.fillRect(Math.round(cx), cy, cw, 5);
@@ -1442,22 +1494,42 @@ function drawSea(c, sx, sw, t, panX) {
 }
 
 /* Birds, high up and crossing slowly. Two-pixel wings, flapping. */
-function drawBirds(c, t, w, panX) {
+function drawBirds(c, t, w, panX, top) {
+    /* Placed as fractions of the sky's depth, for the same reason the clouds
+       are: at a fixed row they end up either cropped away or crowded onto the
+       treeline depending on how tall the stage happens to be. */
+    const depth = 140 - top;
+
     [
-        [0.02, 26, 0.1],
-        [0.03, 40, 0.14],
-        [0.015, 18, 0.08],
-    ].forEach(([speed, y0, par], i) => {
+        [0.02, 0.3, 0.1],
+        [0.03, 0.52, 0.14],
+        [0.015, 0.14, 0.08],
+    ].forEach(([speed, at, par], i) => {
         const span = w + 80;
         const raw = t * speed + i * 260 - panX * par;
         const bx = ((raw % span) + span) % span - 40;
-        const by = y0 + Math.sin(t / 600 + i * 2) * 3;
-        const flap = Math.sin(t / 130 + i * 3) > 0 ? -2 : 1;
+        const by = top + depth * at + Math.sin(t / 600 + i * 2) * 3;
+        /* Two frames of a flap, and a wider span than this had at first: in a
+           half-height sky a three-pixel bird was a detail, in a full-height one
+           it is a speck of dust on the screen. */
+        const up = Math.sin(t / 130 + i * 3) > 0;
 
-        c.fillStyle = 'rgba(40,46,58,.55)';
-        c.fillRect(Math.round(bx - 4), Math.round(by + flap), 3, 1);
-        c.fillRect(Math.round(bx - 1), Math.round(by), 2, 1);
-        c.fillRect(Math.round(bx + 1), Math.round(by + flap), 3, 1);
+        c.fillStyle = 'rgba(38,44,56,.62)';
+
+        if (up) {
+            /* Wings raised: a shallow V. */
+            c.fillRect(Math.round(bx - 6), Math.round(by - 2), 3, 1);
+            c.fillRect(Math.round(bx - 3), Math.round(by - 1), 2, 1);
+            c.fillRect(Math.round(bx - 1), Math.round(by), 3, 1);
+            c.fillRect(Math.round(bx + 2), Math.round(by - 1), 2, 1);
+            c.fillRect(Math.round(bx + 4), Math.round(by - 2), 3, 1);
+            return;
+        }
+
+        /* Wings down: almost flat, with the body a pixel lower. */
+        c.fillRect(Math.round(bx - 6), Math.round(by), 5, 1);
+        c.fillRect(Math.round(bx - 1), Math.round(by + 1), 3, 1);
+        c.fillRect(Math.round(bx + 2), Math.round(by), 5, 1);
     });
 }
 
@@ -1492,6 +1564,8 @@ function boot() {
 
     let scale = 3;
     let viewW = 0; // logical pixels visible across the stage
+    let viewH = WORLD_H; // logical rows drawn, which may be more than the world
+    let skyLift = 0; // extra sky rows above the world's own top edge
     let stageH = 0; // the stage's height in CSS pixels
     let canvasTop = 0; // where the canvas's top edge sits relative to the stage
     let panX = 0; // logical pixels scrolled from the left edge
@@ -1514,45 +1588,71 @@ function boot() {
      * place and four in the next. Pixel art with inconsistent pixels is just
      * blurry art.
      *
-     * The scale comes from the stage's height, and the world is allowed to be
-     * cropped rather than shrunk to fit. LOOK is the promise: however short the
-     * stage, at least this many logical rows stay visible, counted up from the
-     * bottom — so the ground, the landmarks and their feet are never what gets
-     * cut. What goes first is empty sky, which nobody came for.
+     * The ground line is anchored to the bottom of the stage and the sky is
+     * whatever is left above it. That is the whole vertical model, and it means
+     * a taller viewport buys more sky rather than a bigger crop.
+     *
+     * The scale is chosen so the world's own 300 rows fit at least once, because
+     * cropping downward from the top is exactly how the clouds and the birds
+     * disappeared: they live in rows 8 to 66, which is the first thing a
+     * ground-anchored crop eats. Below that the art would have to drop to 1x to
+     * fit, which is unreadably small, so on a genuinely short stage legibility
+     * wins and the sky is cropped after all.
      */
-    const LOOK = 200;
-
     function fit() {
         const rect = stage.getBoundingClientRect();
 
-        scale = Math.max(1, Math.floor(rect.height / LOOK));
-        viewW = Math.ceil(rect.width / scale);
         stageH = rect.height;
 
+        scale = Math.max(1, Math.floor(stageH / WORLD_H));
+
+        /* A short stage would be honest at 1x and useless at it. */
+        if (scale < 2 && stageH >= 380) scale = 2;
+
+        viewW = Math.ceil(rect.width / scale);
+        viewH = Math.ceil(stageH / scale);
+
+        /*
+         * How far the world's y=0 sits below the top of the canvas.
+         *
+         * Positive on a tall stage: rows of extra sky above the world proper.
+         * Negative on a short one: the top of the world is off-canvas, which is
+         * the old cropping behaviour and still the right answer there. One
+         * number covers both, and the transform below means nothing that draws
+         * has to know which case it is in.
+         */
+        skyLift = viewH - WORLD_H;
+
         canvas.width = viewW;
-        canvas.height = WORLD_H;
+        canvas.height = viewH;
         canvas.style.width = viewW * scale + 'px';
-        canvas.style.height = WORLD_H * scale + 'px';
+        canvas.style.height = viewH * scale + 'px';
 
         pickCanvas.width = viewW;
-        pickCanvas.height = WORLD_H;
+        pickCanvas.height = viewH;
 
+        /* Set once per resize: every draw call works in world coordinates and
+           lands in the right place whether there is extra sky or a crop. */
+        c.setTransform(1, 0, 0, 1, 0, skyLift);
         c.imageSmoothingEnabled = false;
+        pickCtx.setTransform(1, 0, 0, 1, 0, skyLift);
         pickCtx.imageSmoothingEnabled = false;
 
-        /* The canvas is bottom-anchored by CSS, so when it is taller than the
-           stage its top edge sits above it — a negative offset. Everything
-           positioned in CSS pixels over the canvas has to add this, or the
-           labels drift down by exactly the amount that was cropped. */
-        canvasTop = stageH - WORLD_H * scale;
+        canvasTop = stageH - viewH * scale;
 
         clampPan();
         drawLabels();
     }
 
+    /* The topmost world row the canvas can show. Negative once there is extra
+       sky, which is what the sky painter needs to fill up to. */
+    function skyTop() {
+        return -skyLift;
+    }
+
     /* Logical row -> where it lands in the stage's own coordinates. */
     function screenY(logicalY) {
-        return canvasTop + logicalY * scale;
+        return canvasTop + (logicalY + skyLift) * scale;
     }
 
     function maxPan() {
@@ -1568,12 +1668,15 @@ function boot() {
     function frame(now) {
         if (motion) elapsed = now - started;
 
-        c.clearRect(0, 0, viewW, WORLD_H);
-        pickCtx.clearRect(0, 0, viewW, WORLD_H);
+        /* Cleared in world coordinates, from whatever the topmost visible row is
+           rather than from zero — with extra sky above, row 0 is not the top. */
+        const top = skyTop();
+        c.clearRect(0, top, viewW, viewH);
+        pickCtx.clearRect(0, top, viewW, viewH);
 
-        drawSky(c, elapsed, viewW, panX);
+        drawSky(c, elapsed, viewW, panX, top);
         drawMountains(c, elapsed, viewW, panX);
-        drawBirds(c, elapsed, viewW, panX);
+        drawBirds(c, elapsed, viewW, panX, top);
         drawGround(c, laid, viewW, panX, worldW, elapsed);
 
         laid.forEach((item, i) => {
@@ -1944,10 +2047,15 @@ function boot() {
        there is anything off to the side depends on how wide the stage is, and a
        phone turned landscape can go from six landmarks hidden to none. */
     function updateHint() {
-        hintEl.textContent =
-            maxPan() > 0
-                ? 'Drag sideways to walk through town — click a landmark to go in'
-                : 'Click a landmark to go in';
+        const walk = maxPan() > 0 ? 'Drag sideways to walk through town' : 'Click a landmark to go in';
+
+        /* The town fills the screen, so whatever is under it is out of sight and
+           needs saying. Only said when there is in fact something below — the
+           compound's list and the front page's notices both qualify, a bare
+           stage would not. */
+        const more = document.querySelector('main#content') ? ' · scroll down for more' : '';
+
+        hintEl.textContent = walk + more;
     }
 
     new ResizeObserver(() => {
