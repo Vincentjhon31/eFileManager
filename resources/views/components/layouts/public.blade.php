@@ -1,10 +1,21 @@
+@props(['title' => null, 'description' => null])
+
 {{--
-    The public face of the municipality.
+    The public face of the municipality — all four pages of it.
 
     Visually distinct from the staff interface on purpose: a citizen reading a
     notice should never be in any doubt that they are on the town's page rather
-    than inside somebody's office system. No navigation into internal screens,
-    no counts, no names.
+    than inside somebody's office system. No navigation into internal screens, no
+    counts, no names.
+
+    One layout rather than two. The welcome page used to have its own, because it
+    opens on the drawn town and a masthead above the sky would put a band of
+    chrome between the visitor and the only part of this system built to be looked
+    at. That is still true — but it is a difference of one slot, not of a whole
+    file: pass $world and the town becomes the header, with the tab strip beneath
+    it; leave it out and you get the ordinary masthead. Everything else — the
+    head, the palette, the footer, the referrer policy — is then shared by
+    construction rather than by somebody remembering to copy it across.
 --}}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -12,87 +23,94 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{{ isset($title) ? $title.' — ' : '' }}{{ config('lgu.name') }}</title>
+    <title>{{ $title ? $title.' — ' : '' }}{{ config('lgu.name') }}</title>
 
     <meta name="description" content="{{ $description ?? 'Public notices and Full Disclosure Policy documents of the '.config('lgu.name').', '.config('lgu.province').'.' }}">
 
-    {{-- A public government page has no business being indexed differently
-         from any other, but it also has no business leaking a referrer to
-         wherever a citizen clicks next. --}}
+    {{-- A public government page has no business being indexed differently from
+         any other, but it also has no business leaking a referrer to wherever a
+         citizen clicks next. --}}
     <meta name="referrer" content="strict-origin-when-cross-origin">
 
-    @vite(['resources/css/app.css'])
+    @if (isset($world))
+        {{-- world.css imports pixel.css, so this one entry brings the design
+             system and the town together. world.js is the renderer, and only
+             this page has anything for it to draw. --}}
+        @vite(['resources/css/app.css', 'resources/css/world.css', 'resources/js/world.js'])
+    @else
+        @vite(['resources/css/app.css', 'resources/css/pixel.css'])
+    @endif
 </head>
-<body class="flex h-full flex-col bg-slate-50 text-slate-900 antialiased">
+<body class="px-page flex h-full flex-col antialiased">
 
     <a href="#content"
-       class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-blue-700 focus:px-4 focus:py-2 focus:text-white">
+       class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[80] focus:bg-blue-700 focus:px-4 focus:py-2 focus:text-white">
         Skip to content
     </a>
 
-    <header class="border-b-4 border-blue-800 bg-white">
-        <div class="mx-auto max-w-5xl px-4 py-5 sm:px-6">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <a href="{{ route('public.home') }}" class="flex items-center gap-3">
-                    <span class="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-800 text-lg font-bold text-white">
-                        {{ config('lgu.code') }}
-                    </span>
-                    <span>
-                        <span class="block text-xs uppercase tracking-wide text-slate-500">
-                            Republic of the Philippines · {{ config('lgu.province') }}
-                        </span>
-                        <span class="block text-lg font-semibold leading-tight">{{ config('lgu.name') }}</span>
+    @isset($world)
+        {{-- The town is the masthead. --}}
+        {{ $world }}
+    @else
+        <header class="px-head">
+            <div class="px-head-in">
+                <a href="{{ route('public.home') }}" class="px-brand">
+                    <span class="px-seal" aria-hidden="true">{{ config('lgu.code') }}</span>
+                    <span class="px-brand-text">
+                        <b>{{ config('lgu.name') }}</b>
+                        <span>Republic of the Philippines · {{ config('lgu.province') }}</span>
                     </span>
                 </a>
 
-                <a href="{{ auth()->check() ? route('dashboard') : route('login') }}"
-                   class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                <span class="px-grow"></span>
+
+                <a href="{{ auth()->check() ? route('compound') : route('login') }}" class="px-btn quiet on-dark">
                     {{ auth()->check() ? 'My desk' : 'Staff sign in' }}
                 </a>
             </div>
-        </div>
+        </header>
+    @endisset
 
-        <nav aria-label="Public sections" class="border-t border-slate-200">
-            <div class="mx-auto max-w-5xl px-4 sm:px-6">
-                <ul class="-mb-px flex gap-6 overflow-x-auto text-sm">
-                    @foreach ([
-                        ['Home', 'public.home'],
-                        ['Notices', 'public.announcements'],
-                        ['Full Disclosure', 'public.disclosure'],
-                    ] as [$label, $name])
-                        @php $active = request()->routeIs($name) || ($name === 'public.announcements' && request()->routeIs('public.announcement')); @endphp
-                        <li>
-                            <a href="{{ route($name) }}"
-                               @class([
-                                   'inline-block whitespace-nowrap border-b-2 px-1 py-3 font-medium transition',
-                                   'border-blue-800 text-blue-800' => $active,
-                                   'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900' => ! $active,
-                               ])
-                               @if ($active) aria-current="page" @endif>
-                                {{ $label }}
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        </nav>
-    </header>
+    {{-- Below the town on the welcome page, below the masthead everywhere else.
+         Either way it is the same strip in the same place relative to the
+         content, so somebody arriving from the front page does not have to find
+         the navigation again. --}}
+    <nav class="px-nav" aria-label="Public sections">
+        <ul>
+            @foreach ([
+                ['Home', 'public.home'],
+                ['Notices', 'public.announcements'],
+                ['Full Disclosure', 'public.disclosure'],
+            ] as [$label, $name])
+                @php
+                    $active = request()->routeIs($name)
+                        || ($name === 'public.announcements' && request()->routeIs('public.announcement'));
+                @endphp
+                <li>
+                    <a href="{{ route($name) }}" @if ($active) aria-current="page" @endif>{{ $label }}</a>
+                </li>
+            @endforeach
+        </ul>
+    </nav>
 
-    {{-- Only the home page fills this — a full-width band above the
-         constrained column, the same way the header's background already
-         spans edge to edge while its content stays in the 5xl column. --}}
-    {{ $hero ?? '' }}
-
-    <main id="content" class="mx-auto w-full max-w-5xl grow px-4 py-8 sm:px-6">
+    <main id="content" class="px-wrap grow">
         {{ $slot }}
     </main>
 
-    <footer class="border-t border-slate-200 bg-white">
-        <div class="mx-auto max-w-5xl px-4 py-8 text-sm text-slate-600 sm:px-6">
-            <p class="font-medium text-slate-800">{{ config('lgu.name') }}</p>
-            <p class="mt-1">Province of {{ config('lgu.province') }}, Republic of the Philippines</p>
+    <footer class="px-foot">
+        <div class="px-foot-in">
+            <b>{{ config('lgu.name') }}</b>
+            <p>Province of {{ config('lgu.province') }}, Republic of the Philippines</p>
 
-            <p class="mt-4 max-w-2xl text-xs leading-relaxed text-slate-500">
+            <nav aria-label="Elsewhere on this site">
+                <a href="{{ route('public.announcements') }}">All notices</a>
+                <a href="{{ route('public.disclosure') }}">Full Disclosure board</a>
+                <a href="{{ auth()->check() ? route('compound') : route('login') }}">
+                    {{ auth()->check() ? 'My desk' : 'Staff sign in' }}
+                </a>
+            </nav>
+
+            <p class="fine">
                 Documents on the Full Disclosure page are posted in accordance with the
                 Department of the Interior and Local Government's Full Disclosure Policy.
                 For records not published here, file a request with the office concerned.

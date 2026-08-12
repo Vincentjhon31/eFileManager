@@ -1,0 +1,948 @@
+/*
+|------------------------------------------------------------------------------
+| The pixel design system
+|------------------------------------------------------------------------------
+|
+| The palette and the furniture for the whole public side: the tokens, and the
+| cards, badges, buttons, forms, tables and chrome built out of them.
+|
+| Split from world.css so the two can be loaded independently. The drawn town
+| needs all of this plus a canvas renderer; a page of notices needs only this. So
+| world.css imports this file and the notice pages load it directly, and neither
+| ends up shipping the other's weight.
+|
+| Everything below started as ordinary Tailwind — rounded corners, soft ring
+| shadows, the app's blue — and the join with the pixel-art panorama above it was
+| the problem: the drawing looked like a decoration bolted onto a normal website
+| rather than the same place seen from a different distance. So the public side
+| now has one visual language all the way down.
+|
+| Chunky, not small. Every rule here is about edges — hard 3px shadows instead of
+| borders, no radius anywhere, an offset drop shadow so a card sits *on* the page
+| rather than floating above it — and none of it is about shrinking the type or
+| lowering the contrast. This is a gov.ph page read on old phones by people who
+| did not choose to use this software, so the body text stays a normal readable
+| size in a normal readable face. Only the furniture around it is pixellated.
+|
+| Prefixed .px- throughout, so nothing here can collide with a Tailwind utility
+| and a staff screen loading app.css alone is untouched by any of it.
+|
+*/
+
+:root {
+    --ink: #1b1f2a;
+    --cream: #f4ecda;
+    --amber: #f2a93b;
+    --rust: #c1462f;
+    --slate: #171c26;
+    --slate-2: #222938;
+    --line: #3a4356;
+    --teal: #2e7d7b;
+    --green: #6fa84f;
+    --navy: #1b3a6b;
+    --sky: #8fc7d6;
+    --haze: #cfe4e2;
+    --muted: #9dafc6;
+    --muted-2: #7e8fa8;
+
+    /* Parchment: the ground the reading happens on, and its ink. */
+    --paper: #fffdf6;
+    --ground: #ece2cf;
+    --rule: #e0d5bd;
+    --ink-2: #33301f;
+    --ink-3: #4a4535;
+    --ink-4: #6e6552;
+
+    /* One border width for the whole screen. Pixel art has no half-pixels and
+       neither does anything drawn around it. */
+    --pix: 3px;
+
+    --display: 'Space Grotesk', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/*
+| The ground.
+|
+| A parchment checker, 16px on the diagonal, drawn with two gradients rather than
+| an image so it costs nothing and stays crisp at any zoom. Deliberately faint:
+| texture at arm's length, and nothing at all while you are reading a sentence on
+| top of it.
+*/
+.px-page {
+    background-color: var(--ground);
+    background-image:
+        linear-gradient(
+            45deg,
+            rgba(27, 31, 42, 0.028) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(27, 31, 42, 0.028) 75%
+        ),
+        linear-gradient(
+            45deg,
+            rgba(27, 31, 42, 0.028) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(27, 31, 42, 0.028) 75%
+        );
+    background-size: 16px 16px;
+    background-position:
+        0 0,
+        8px 8px;
+    color: var(--ink);
+}
+
+.px-wrap {
+    width: 100%;
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: 34px 16px 46px;
+}
+
+/*
+| Vertical rhythm by gap, not by margin.
+|
+| This was `.px-stack > * + * { margin-top: 30px }`, which is the usual way to
+| write it and quietly wrong here. That selector's specificity is one class — the
+| two universals count for nothing — so it ties with `.px-grid { margin: 0 }` and
+| `.px-rows { margin: 0 }` further down the file, and the later rule won. The
+| result was a grid of shelves sliding up under the paragraph above it, which
+| looks like a layout bug and is a cascade one.
+|
+| gap cannot be overridden by a child's own margin reset, so the spacing between
+| sections stops depending on the order rules happen to appear in.
+*/
+.px-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+@media (min-width: 640px) {
+    .px-wrap {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| Masthead and the tab strip
+|------------------------------------------------------------------------------
+*/
+
+.px-head {
+    background: var(--slate);
+    box-shadow: inset 0 -3px 0 var(--amber);
+}
+
+.px-head-in,
+.px-nav ul,
+.px-foot-in {
+    width: 100%;
+    max-width: 62rem;
+    margin: 0 auto;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+@media (min-width: 640px) {
+    .px-head-in,
+    .px-nav ul,
+    .px-foot-in {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+}
+
+.px-head-in {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+.px-seal {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    background: var(--rust);
+    box-shadow: 0 0 0 3px var(--ink);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--cream);
+    text-decoration: none;
+}
+
+.px-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    text-decoration: none;
+}
+
+/*
+| Both lines of the wordmark are addressed through .px-brand-text, not through a
+| bare descendant selector.
+|
+| `.px-brand span` seemed like the obvious way to write the second line, and it
+| also matched the seal — which is a span too. The seal lost its grid centring and
+| its size to a rule meant for the strapline, and rendered as three tiny muted
+| letters in its own top-left corner. A class is cheaper than remembering that.
+*/
+.px-brand-text {
+    min-width: 0;
+}
+
+.px-brand-text b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    line-height: 1.2;
+    color: var(--cream);
+}
+
+.px-brand-text span {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+}
+
+/* A button standing on the dark chrome rather than on parchment. */
+.px-btn.on-dark {
+    color: var(--cream);
+    box-shadow: 0 0 0 3px var(--muted-2);
+}
+
+.px-btn.on-dark:hover,
+.px-btn.on-dark:focus-visible {
+    color: var(--ink);
+    background: var(--amber);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        4px 4px 0 var(--line);
+}
+
+.px-grow {
+    flex: 1 1 auto;
+}
+
+.px-nav {
+    background: var(--slate-2);
+    box-shadow: inset 0 -3px 0 var(--ink);
+}
+
+.px-nav ul {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    list-style: none;
+    margin: 0;
+}
+
+.px-nav a {
+    display: inline-block;
+    padding: 12px 15px;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 14px;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--muted);
+}
+
+.px-nav a:hover {
+    color: var(--cream);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.px-nav a[aria-current='page'] {
+    color: var(--ink);
+    background: var(--amber);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Type
+|------------------------------------------------------------------------------
+*/
+
+.px-h1,
+.px-h2,
+.px-h3 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--ink);
+}
+
+.px-h1 {
+    font-size: clamp(24px, 4vw, 33px);
+    letter-spacing: -0.01em;
+}
+
+.px-h2 {
+    font-size: clamp(18px, 2.4vw, 22px);
+}
+
+.px-h3 {
+    font-size: 17px;
+    font-weight: 500;
+}
+
+/* A section heading whose rule fills the space beside it: the pixel equivalent
+   of a hairline border-bottom, made out of the one border width there is. */
+.px-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 14px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+.px-eyebrow::after {
+    content: '';
+    flex: 1;
+    height: 3px;
+    background: repeating-linear-gradient(90deg, #c3b79f 0 6px, transparent 6px 12px);
+}
+
+.px-lead {
+    margin: 10px 0 0;
+    max-width: 44rem;
+    font-size: 15.5px;
+    line-height: 1.65;
+    color: var(--ink-3);
+}
+
+.px-body {
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: var(--ink-2);
+}
+
+.px-body p + p {
+    margin-top: 1.1em;
+}
+
+.px-meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-4);
+}
+
+.px-link {
+    font-family: var(--display);
+    font-weight: 500;
+    color: var(--navy);
+    text-decoration: none;
+    box-shadow: inset 0 -2px 0 rgba(27, 58, 107, 0.28);
+}
+
+.px-link:hover {
+    box-shadow: inset 0 -3px 0 var(--amber);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Cards
+|------------------------------------------------------------------------------
+|
+| Two shadows do the work: a hard 3px ink outline, and an offset block beneath it
+| with no blur at all. That offset is what makes a card sit on the page rather
+| than hover over it, and it is the one thing a rounded, blurred box-shadow
+| cannot imitate.
+*/
+
+.px-card {
+    position: relative;
+    display: block;
+    padding: 18px;
+    background: var(--paper);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        5px 5px 0 rgba(27, 31, 42, 0.16);
+}
+
+a.px-card,
+button.px-card {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.1s steps(2);
+}
+
+a.px-card:hover,
+a.px-card:focus-visible,
+button.px-card:hover,
+button.px-card:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        7px 7px 0 var(--amber);
+}
+
+/* The pinned notice: a bar down the leading edge in the palette's loudest
+   colour, because "read this one first" is the whole message. */
+.px-card.px-pinned {
+    padding-left: 26px;
+}
+
+.px-card.px-pinned::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 10px;
+    background: var(--rust);
+}
+
+.px-card-title {
+    margin: 10px 0 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 19px;
+    line-height: 1.28;
+}
+
+.px-card-title a {
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.px-card-title a:hover {
+    box-shadow: inset 0 -3px 0 var(--amber);
+}
+
+.px-card p {
+    margin: 10px 0 0;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink-3);
+}
+
+.px-card .px-meta {
+    display: block;
+    margin-top: 12px;
+}
+
+.px-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Badges
+|------------------------------------------------------------------------------
+|
+| Tone names match the ones the enums already hand out, so a category keeps the
+| same colour here as it has on the staff side.
+*/
+
+.px-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    /* The neutral tone, and dark enough to carry cream text properly — the
+       muted grey this started as left the most common badge on the page the
+       hardest one to read. */
+    background: #55627a;
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--cream);
+}
+
+.px-badge.t-green {
+    background: var(--green);
+    color: var(--ink);
+}
+
+.px-badge.t-amber {
+    background: var(--amber);
+    color: var(--ink);
+}
+
+.px-badge.t-blue {
+    background: var(--navy);
+    color: var(--cream);
+}
+
+.px-badge.t-red {
+    background: var(--rust);
+    color: #fff;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Buttons and forms
+|------------------------------------------------------------------------------
+*/
+
+.px-btn {
+    display: inline-block;
+    padding: 11px 16px;
+    border: 0;
+    background: var(--cream);
+    box-shadow: 0 0 0 3px var(--ink);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.1s steps(2);
+}
+
+.px-btn:hover,
+.px-btn:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        4px 4px 0 var(--ink);
+}
+
+.px-btn.go {
+    background: var(--amber);
+}
+
+.px-btn.quiet {
+    background: transparent;
+    box-shadow: 0 0 0 3px #b3a68d;
+}
+
+.px-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px;
+    padding: 18px;
+    background: var(--paper);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        5px 5px 0 rgba(27, 31, 42, 0.16);
+}
+
+.px-field label,
+.px-label {
+    display: block;
+    margin-bottom: 6px;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5c5442;
+}
+
+/*
+| Fields, stated outright.
+|
+| @tailwindcss/forms paints inputs and selects with a literal white and a rounded
+| border, neither of which belongs here, and it sets them at a specificity these
+| have to beat. So the whole control is described rather than adjusted.
+*/
+.px-page input[type='search'],
+.px-page input[type='text'],
+.px-page select {
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--ink);
+    font-size: 14.5px;
+    color: var(--ink);
+}
+
+.px-page input:focus,
+.px-page select:focus {
+    outline: 0;
+    box-shadow:
+        0 0 0 3px var(--ink),
+        0 0 0 6px var(--amber);
+}
+
+.px-page input[type='search'] {
+    width: 100%;
+    min-width: 0;
+}
+
+@media (min-width: 640px) {
+    .px-page input[type='search'] {
+        width: 16rem;
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| Grids, shelves, rows
+|------------------------------------------------------------------------------
+*/
+
+.px-grid {
+    display: grid;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (min-width: 620px) {
+    .px-grid.two,
+    .px-grid.three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 940px) {
+    .px-grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.px-shelf {
+    display: block;
+    padding: 14px 16px;
+    background: var(--paper);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        4px 4px 0 rgba(27, 31, 42, 0.14);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.1s steps(2);
+}
+
+.px-shelf:hover,
+.px-shelf:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        6px 6px 0 var(--amber);
+}
+
+.px-shelf[aria-current='true'] {
+    background: var(--amber);
+}
+
+.px-shelf b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.px-shelf span {
+    display: block;
+    margin-top: 5px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-3);
+}
+
+.px-shelf em {
+    display: block;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--ink-4);
+}
+
+.px-shelf[aria-current='true'] span,
+.px-shelf[aria-current='true'] em {
+    color: #4a3a17;
+}
+
+.px-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--paper);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        5px 5px 0 rgba(27, 31, 42, 0.16);
+}
+
+.px-rows li + li {
+    box-shadow: inset 0 3px 0 var(--rule);
+}
+
+.px-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    padding: 14px 16px;
+}
+
+.px-row .px-grow {
+    min-width: 12rem;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The disclosure panel
+|------------------------------------------------------------------------------
+|
+| The one block on the front page in a different colour, because it is the one
+| block that exists because the law says it must.
+*/
+
+.px-panel {
+    padding: 22px 20px;
+    background: #f7e6c2;
+    box-shadow:
+        0 0 0 3px var(--ink),
+        6px 6px 0 rgba(27, 31, 42, 0.18);
+}
+
+.px-panel-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.px-panel hr {
+    height: 3px;
+    margin: 22px 0 18px;
+    border: 0;
+    background: repeating-linear-gradient(90deg, #c9a960 0 6px, transparent 6px 12px);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Table
+|------------------------------------------------------------------------------
+*/
+
+.px-tablewrap {
+    overflow-x: auto;
+    background: var(--paper);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        5px 5px 0 rgba(27, 31, 42, 0.16);
+}
+
+.px-table {
+    width: 100%;
+    min-width: 44rem;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.px-table th {
+    padding: 12px 14px;
+    background: var(--slate-2);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--cream);
+}
+
+.px-table td {
+    padding: 13px 14px;
+    vertical-align: top;
+    box-shadow: inset 0 3px 0 var(--rule);
+}
+
+.px-table tbody tr:hover {
+    background: #fff8e6;
+}
+
+.px-table .num {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    white-space: nowrap;
+    color: var(--ink-3);
+}
+
+.px-table .right {
+    text-align: right;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Empty states and pagination
+|------------------------------------------------------------------------------
+*/
+
+.px-empty {
+    padding: 44px 20px;
+    text-align: center;
+    background: var(--paper);
+    box-shadow: 0 0 0 3px #b3a68d;
+}
+
+.px-empty b {
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+}
+
+.px-empty span {
+    font-size: 14px;
+    color: #5c5442;
+}
+
+.px-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 26px;
+}
+
+.px-pager .step,
+.px-pager .page {
+    display: inline-block;
+    padding: 9px 13px;
+    background: var(--cream);
+    box-shadow: 0 0 0 3px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13.5px;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.px-pager a.step:hover,
+.px-pager a.page:hover {
+    background: var(--amber);
+}
+
+.px-pager .page[aria-current='page'] {
+    background: var(--ink);
+    color: var(--cream);
+}
+
+.px-pager .off {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.px-pager .gap {
+    font-family: var(--mono);
+    color: var(--ink-4);
+}
+
+.px-pager .count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-4);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Footer
+|------------------------------------------------------------------------------
+*/
+
+.px-foot {
+    background: var(--slate);
+    box-shadow: inset 0 3px 0 var(--amber);
+}
+
+.px-foot-in {
+    padding-top: 30px;
+    padding-bottom: 36px;
+    color: var(--muted);
+}
+
+.px-foot b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--cream);
+}
+
+.px-foot p {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+.px-foot .fine {
+    margin-top: 18px;
+    max-width: 44rem;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--muted-2);
+}
+
+.px-foot nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.px-foot nav a {
+    display: inline-block;
+    padding: 8px 12px;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--cream);
+    text-decoration: none;
+}
+
+.px-foot nav a:hover {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+/*
+| Stillness. Mirrors the rule in world.css: the operating system's preference is
+| honoured without being asked, and the gear button on the welcome page writes the
+| same attribute.
+*/
+[data-motion='off'] .px-card,
+[data-motion='off'] .px-shelf,
+[data-motion='off'] .px-btn {
+    transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .px-card,
+    .px-shelf,
+    .px-btn {
+        transition: none !important;
+    }
+}

@@ -21,29 +21,14 @@
 |
 */
 
-:root {
-    --ink: #1b1f2a;
-    --cream: #f4ecda;
-    --amber: #f2a93b;
-    --rust: #c1462f;
-    --slate: #171c26;
-    --slate-2: #222938;
-    --line: #3a4356;
-    --teal: #2e7d7b;
-    --green: #6fa84f;
-    --navy: #1b3a6b;
-    --sky: #8fc7d6;
-    --haze: #cfe4e2;
-    --muted: #9dafc6;
-    --muted-2: #7e8fa8;
-
-    /* One border width for the whole screen. Pixel art has no half-pixels and
-       neither does anything drawn around it. */
-    --pix: 3px;
-
-    --display: 'Space Grotesk', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-}
+/*
+| The palette, the type and all the furniture around the drawing.
+|
+| Imported rather than repeated: a page of notices needs the design system
+| without the canvas renderer, so pixel.css stands alone and this file adds the
+| town on top of it. Every --token below comes from there.
+*/
+@import './pixel.css';
 
 /*
 |------------------------------------------------------------------------------

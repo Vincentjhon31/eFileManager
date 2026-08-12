@@ -15,6 +15,14 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+
+                /*
+                 * pixel.css is the public side's design system; world.css is the
+                 * drawn town, and imports pixel.css. So a page of notices loads
+                 * pixel.css alone and the welcome page loads world.css, which
+                 * brings both — neither ships the other's weight.
+                 */
+                'resources/css/pixel.css',
                 'resources/css/world.css',
                 'resources/js/world.js',
             ],
