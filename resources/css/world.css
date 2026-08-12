@@ -1,0 +1,800 @@
+/*
+|------------------------------------------------------------------------------
+| The town
+|------------------------------------------------------------------------------
+|
+| Everything the drawn welcome page needs, and nothing any other screen does —
+| which is why it is a separate entry point rather than more lines in app.css.
+| The staff interface loads none of this.
+|
+| Plain CSS on purpose. This file describes one screen with one look, and that
+| look is chunky and deliberate: hard 3px shadows instead of borders, no rounded
+| corners anywhere, integer-scaled pixel art. Tailwind's utilities are the wrong
+| tool for that — every rule here would have needed an arbitrary value — and the
+| notices further down the page still use them, from app.css, as normal.
+|
+| A note on the palette. It is not the app's blue-and-slate. The welcome page is
+| the one screen a citizen sees before they know what this software is, and it is
+| meant to read as the town rather than as an office system. The two palettes
+| never meet: nothing below the world uses these variables, nothing in the world
+| uses Tailwind's.
+|
+*/
+
+:root {
+    --ink: #1b1f2a;
+    --cream: #f4ecda;
+    --amber: #f2a93b;
+    --rust: #c1462f;
+    --slate: #171c26;
+    --slate-2: #222938;
+    --line: #3a4356;
+    --teal: #2e7d7b;
+    --green: #6fa84f;
+    --navy: #1b3a6b;
+    --sky: #8fc7d6;
+    --haze: #cfe4e2;
+    --muted: #9dafc6;
+    --muted-2: #7e8fa8;
+
+    /* One border width for the whole screen. Pixel art has no half-pixels and
+       neither does anything drawn around it. */
+    --pix: 3px;
+
+    --display: 'Space Grotesk', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Progressive enhancement
+|------------------------------------------------------------------------------
+|
+| The rest of the public side works with JavaScript switched off, and the front
+| page is not going to be the exception. So the markup ships a real list of
+| links, and the canvas ships hidden.
+|
+| world.js sets data-world="on" on <html> as its first act. Until that happens —
+| and forever, if the file never arrives — the list is the page and the drawn
+| town does not exist. Written this way round on purpose: the failure mode of a
+| missing attribute is a plain, working list of links, not a blank stage.
+|
+*/
+
+.world-stage {
+    display: none;
+}
+
+.world-fallback {
+    display: block;
+}
+
+[data-world='on'] .world-stage {
+    display: block;
+}
+
+[data-world='on'] .world-fallback {
+    display: none;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The stage
+|------------------------------------------------------------------------------
+|
+| Sized against the viewport rather than the content: the town is a view out of
+| a window, and the window is however tall the screen is, less enough room to
+| make it obvious the page continues below. Capped so it does not become a
+| letterbox on a tall desktop monitor.
+|
+*/
+
+.world-stage {
+    position: relative;
+    overflow: hidden;
+    height: min(78vh, 660px);
+    min-height: 420px;
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky) 58%, var(--haze) 58%, var(--haze) 100%);
+    /* The canvas is dragged sideways, so the browser must not claim horizontal
+       gestures for its own scrolling. Vertical is left alone — a touch that
+       starts on the town and moves down should still scroll to the notices. */
+    touch-action: pan-y;
+    user-select: none;
+}
+
+/*
+| Bottom-anchored, and allowed to be taller than the stage.
+|
+| The world is cropped rather than shrunk when the viewport is short, and it is
+| cropped from the top — so the ground, the landmarks and their feet are always
+| in view and what gets lost is empty sky. See fit() in world.js for the scale
+| that decides how much.
+*/
+.world-canvas {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    display: block;
+    /* The whole point. Without this the browser smooths a 4x-scaled sprite into
+       mush and the art stops being pixel art. */
+    image-rendering: pixelated;
+    cursor: grab;
+}
+
+.world-canvas.dragging {
+    cursor: grabbing;
+}
+
+/* Sits over the canvas, in CSS pixels, so landmark names are real text at a
+   real size rather than letters drawn four pixels tall. */
+.world-labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.world-label {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    text-align: center;
+    white-space: nowrap;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.25;
+    color: #241f16;
+    /* A halo rather than a box: the label has to stay legible over sky,
+       leaves and roof tiles without covering the art it is naming. */
+    text-shadow:
+        0 0 3px rgba(255, 255, 255, 0.95),
+        0 1px 0 rgba(255, 255, 255, 0.95),
+        0 -1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.world-label .badge {
+    display: inline-block;
+    margin-top: 3px;
+    padding: 2px 5px;
+    background: var(--rust);
+    color: #fff;
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.01em;
+    text-shadow: none;
+    box-shadow: 0 0 0 2px var(--ink);
+}
+
+/*
+|------------------------------------------------------------------------------
+| The hero
+|------------------------------------------------------------------------------
+*/
+
+/*
+| The title, as a signboard in the corner.
+|
+| Centred and large it collided with the municipal hall, which is the tallest
+| thing in town and — being the way in for staff — the last thing that should be
+| covered. Off to one side and given a plaque of its own it stops competing with
+| the art and starts looking like part of it. The plaque also means the type
+| never has to be legible against whatever happens to be behind it.
+*/
+.world-hero {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    padding: 10px 14px 11px;
+    background: var(--cream);
+    box-shadow: 0 0 0 2px var(--ink);
+    pointer-events: none;
+}
+
+.world-hero h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(22px, 3.4vw, 34px);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+.world-hero p {
+    margin: 5px 0 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(9.5px, 1.3vw, 12px);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--navy);
+}
+
+/* The keyboard route starts where the plaque ends, so a focused landmark button
+   never appears underneath it. */
+.world-keynav {
+    top: auto;
+    bottom: 78px;
+}
+
+.world-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    z-index: 2;
+    padding: 7px 12px;
+    background: rgba(244, 236, 218, 0.88);
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--ink);
+    pointer-events: none;
+    text-align: center;
+    max-width: calc(100% - 24px);
+}
+
+/*
+|------------------------------------------------------------------------------
+| The hover tag
+|------------------------------------------------------------------------------
+|
+| Follows the pointer's landmark rather than the pointer, so it sits over the
+| thing being named and holds still while the cursor moves inside it.
+|
+*/
+
+.world-tag {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    z-index: 4;
+    padding: 7px 10px;
+    background: var(--ink);
+    color: var(--cream);
+    box-shadow: 0 0 0 2px var(--cream);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.world-tag b {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--mono);
+    font-weight: 400;
+    font-size: 11.5px;
+    color: var(--amber);
+}
+
+.world-tag[data-show='true'] {
+    opacity: 1;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Corner controls
+|------------------------------------------------------------------------------
+*/
+
+.world-corner {
+    position: absolute;
+    bottom: 14px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.world-corner.left {
+    left: 14px;
+}
+
+.world-corner.right {
+    right: 14px;
+}
+
+.world-btn {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: var(--cream);
+    box-shadow: 0 0 0 2px var(--ink);
+    cursor: pointer;
+    transition: transform 0.1s steps(2);
+}
+
+.world-btn:hover,
+.world-btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.world-btn canvas {
+    image-rendering: pixelated;
+    width: 30px;
+    height: 30px;
+}
+
+.world-btn-label {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--navy);
+}
+
+.world-pop {
+    position: absolute;
+    right: 0;
+    bottom: 64px;
+    padding: 11px 13px;
+    background: var(--slate);
+    color: var(--cream);
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.world-pop label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Keyboard route through the town
+|------------------------------------------------------------------------------
+|
+| A canvas cannot be tabbed into, so every landmark also exists as a button that
+| is invisible until it is focused and then becomes an ordinary, readable one.
+| Not sr-only: somebody tabbing with the screen on has to be able to see where
+| they are, and hiding these outright would leave a sighted keyboard user with a
+| focus ring on nothing.
+|
+*/
+
+.world-keynav {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.world-keynav a,
+.world-keynav button {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    opacity: 0;
+    white-space: nowrap;
+}
+
+.world-keynav a:focus-visible,
+.world-keynav button:focus-visible {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 8px 12px;
+    overflow: visible;
+    opacity: 1;
+    background: var(--ink);
+    color: var(--cream);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    text-decoration: none;
+    outline: var(--pix) solid var(--amber);
+    outline-offset: 2px;
+    cursor: pointer;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The guide
+|------------------------------------------------------------------------------
+|
+| Animated about his own feet and never translated. A sprite that slides across
+| the screen reads as walking, and this one is standing still talking to you —
+| so he breathes and leans, and his transform-origin is the ground he stands on.
+|
+*/
+
+/* Standing on the path along the front of town, low and small enough that he
+   overlaps the strip of ground nobody clicks rather than a landmark's body.
+   Wherever he stands something will eventually be panned behind him — the point
+   is that it is never the part somebody is aiming at. */
+.world-npc {
+    position: absolute;
+    right: clamp(74px, 12vw, 128px);
+    bottom: 0;
+    z-index: 3;
+    width: clamp(52px, 9vw, 88px);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    transform-origin: 50% 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s;
+}
+
+.world-npc.ready {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.world-npc canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    transform-origin: 50% 100%;
+    filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.28));
+    animation: npc-breathe 3.2s ease-in-out infinite;
+}
+
+.world-npc.talking canvas {
+    animation: npc-talk 0.18s steps(2) infinite;
+}
+
+@keyframes npc-breathe {
+    0%,
+    100% {
+        transform: scaleY(1) rotate(0deg);
+    }
+    50% {
+        transform: scaleY(1.015) rotate(0.4deg);
+    }
+}
+
+@keyframes npc-talk {
+    0% {
+        transform: scaleY(1) rotate(0deg);
+    }
+    50% {
+        transform: scaleY(0.985) rotate(-1.4deg);
+    }
+    100% {
+        transform: scaleY(1.01) rotate(1.4deg);
+    }
+}
+
+.world-bubble {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    margin-bottom: 9px;
+    width: max-content;
+    max-width: min(60vw, 250px);
+    padding: 9px 12px;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--cream);
+    color: var(--ink);
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: left;
+    opacity: 0;
+    min-height: 1.5em;
+    pointer-events: none;
+    transition:
+        opacity 0.15s,
+        transform 0.15s;
+}
+
+.world-bubble.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.world-bubble .who {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--navy);
+}
+
+/* The tail, drawn twice: the outer triangle is the 2px shadow, the inner one
+   the fill sitting a pixel and a half in front of it. */
+.world-bubble::after,
+.world-bubble::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+}
+
+.world-bubble::after {
+    bottom: -7px;
+    border-top: 7px solid var(--ink);
+}
+
+.world-bubble::before {
+    bottom: -4.5px;
+    border-left-width: 5px;
+    border-right-width: 5px;
+    border-top: 5px solid var(--cream);
+    z-index: 1;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Cloud wipe
+|------------------------------------------------------------------------------
+|
+| Two ragged panels close over the screen before a navigation, so leaving the
+| town looks like weather rather than a white flash. Fixed to the viewport
+| rather than the stage: it is covering a page change, not a landmark.
+|
+*/
+
+.world-wipe {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    overflow: hidden;
+}
+
+.world-wipe.active {
+    display: block;
+}
+
+.world-wipe span {
+    position: absolute;
+    top: -4%;
+    bottom: -4%;
+    width: 58%;
+    background: linear-gradient(180deg, #fdfefe 0%, #e7f1f0 55%, #d7e9e7 100%);
+    transition: transform 0.36s cubic-bezier(0.5, 0, 0.5, 1);
+    will-change: transform;
+}
+
+.world-wipe .l {
+    left: 0;
+    transform: translateX(-102%);
+    clip-path: polygon(
+        0 0,
+        100% 0,
+        90% 6%,
+        100% 12%,
+        88% 18%,
+        100% 24%,
+        92% 30%,
+        100% 36%,
+        86% 42%,
+        100% 48%,
+        90% 54%,
+        100% 60%,
+        88% 66%,
+        100% 72%,
+        92% 78%,
+        100% 84%,
+        90% 90%,
+        100% 96%,
+        94% 100%,
+        0 100%
+    );
+}
+
+.world-wipe .r {
+    right: 0;
+    transform: translateX(102%);
+    clip-path: polygon(
+        100% 0,
+        0 0,
+        10% 6%,
+        0 12%,
+        12% 18%,
+        0 24%,
+        8% 30%,
+        0 36%,
+        14% 42%,
+        0 48%,
+        10% 54%,
+        0 60%,
+        12% 66%,
+        0 72%,
+        8% 78%,
+        0 84%,
+        10% 90%,
+        0 96%,
+        6% 100%,
+        100% 100%
+    );
+}
+
+.world-wipe.cover span {
+    transform: translateX(0);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Splash
+|------------------------------------------------------------------------------
+|
+| Shown once per browser session, not once per visit. Somebody who reads a
+| notice and comes back to the front page has already sat through it, and a
+| title card on every navigation stops being charming after the second time.
+|
+*/
+
+.world-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: radial-gradient(circle at 50% 40%, #233a63 0%, #151e33 62%, #0e1526 100%);
+    cursor: pointer;
+    transition:
+        opacity 0.5s ease,
+        visibility 0.5s;
+}
+
+.world-splash.done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.world-splash canvas {
+    width: 72px;
+    height: 72px;
+    image-rendering: pixelated;
+    animation: splash-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes splash-pop {
+    0% {
+        transform: scale(0) rotate(-25deg);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.15) rotate(4deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.world-splash .word {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+    max-width: 92vw;
+}
+
+.world-splash .word span {
+    display: inline-block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(21px, 6vw, 36px);
+    letter-spacing: 0.02em;
+    color: var(--cream);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: splash-letter 0.4s ease forwards;
+}
+
+.world-splash .word.sub span {
+    font-weight: 500;
+    font-size: clamp(10px, 2.6vw, 14px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+
+@keyframes splash-letter {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.world-splash .bar {
+    width: min(70vw, 220px);
+    height: 8px;
+    margin-top: 4px;
+    overflow: hidden;
+    background: rgba(244, 236, 218, 0.15);
+    box-shadow: 0 0 0 2px var(--ink);
+}
+
+.world-splash .bar i {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--amber);
+    transition: width 0.1s linear;
+}
+
+.world-splash .skip {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11.5px;
+    color: #9fb0c6;
+    opacity: 0;
+    animation: splash-fade 0.4s ease 0.9s forwards;
+}
+
+@keyframes splash-fade {
+    to {
+        opacity: 0.8;
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| Stillness
+|------------------------------------------------------------------------------
+|
+| Two ways to arrive here: the operating system's own preference, honoured
+| without being asked, and the gear button for somebody whose machine says
+| nothing but who has had enough of the waves. Both land on the same attribute
+| so there is one thing to check, in CSS and in the renderer alike.
+|
+| The renderer stops advancing its clock, which freezes the drawn animation. All
+| this has to do is stop the CSS ones.
+|
+*/
+
+[data-motion='off'] .world-npc canvas,
+[data-motion='off'] .world-splash canvas,
+[data-motion='off'] .world-splash .word span {
+    animation: none !important;
+}
+
+[data-motion='off'] .world-wipe span,
+[data-motion='off'] .world-bubble,
+[data-motion='off'] .world-btn {
+    transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .world-npc canvas,
+    .world-splash canvas {
+        animation: none !important;
+    }
+
+    .world-wipe span,
+    .world-bubble {
+        transition: none !important;
+    }
+}

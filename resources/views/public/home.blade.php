@@ -1,45 +1,21 @@
-<x-layouts.public>
-    <x-slot:hero>
-        <section class="bg-gradient-to-b from-blue-900 to-blue-800 text-white">
-            <div class="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:py-16">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">
-                    Republic of the Philippines · {{ config('lgu.province') }}
-                </p>
+<x-layouts.world>
+    <x-slot:world>
+        <x-world :payload="$world"
+                 heading="Welcome"
+                 :subheading="config('lgu.name')"
+                 :corner-href="route('public.announcements')"
+                 corner-label="Notices"
+                 corner-icon="track" />
+    </x-slot:world>
 
-                <h1 class="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                    Welcome to the {{ config('lgu.name') }}
-                </h1>
+    {{--
+        Below the town, the reason the town is there.
 
-                <p class="mt-4 max-w-xl text-base leading-relaxed text-blue-100">
-                    Public notices and the town's Full Disclosure Policy board — open to everyone the
-                    town serves, no account needed.
-                </p>
-
-                <div class="mt-7 flex flex-wrap gap-3">
-                    <a href="{{ route('public.announcements') }}"
-                       class="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-50">
-                        Read notices
-                    </a>
-                    <a href="{{ route('public.disclosure') }}"
-                       class="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
-                        Full Disclosure board
-                    </a>
-                </div>
-
-                <dl class="mt-9 flex flex-wrap gap-x-10 gap-y-3 border-t border-white/15 pt-6">
-                    <div>
-                        <dt class="text-xs text-blue-200">Active notices</dt>
-                        <dd class="text-lg font-semibold">{{ $noticeCount }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs text-blue-200">Documents disclosed</dt>
-                        <dd class="text-lg font-semibold">{{ $disclosureCount }}</dd>
-                    </div>
-                </dl>
-            </div>
-        </section>
-    </x-slot:hero>
-
+        Unchanged in substance from the page this replaced: pinned notices,
+        latest notices, the disclosure shelves. Somebody who scrolled past the
+        artwork is here to read something, and this is the part that has to be
+        plain.
+    --}}
     <div class="space-y-10">
 
         @if ($pinned->isNotEmpty())
@@ -163,4 +139,4 @@
             @endif
         </section>
     </div>
-</x-layouts.public>
+</x-layouts.world>

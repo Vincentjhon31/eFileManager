@@ -6,6 +6,7 @@ use App\Enums\AnnouncementCategory;
 use App\Enums\DisclosureCategory;
 use App\Models\Announcement;
 use App\Models\PublicFile;
+use App\Support\World;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -28,7 +29,21 @@ class PublicPortalController extends Controller
     {
         $shelves = $this->shelfCounts();
 
+        $noticeCount = Announcement::query()->live()->forTheFrontPage()->count();
+        $disclosureCount = array_sum(array_column($shelves, 'count'));
+
         return view('public.home', [
+            /*
+             * The drawn town.
+             *
+             * The landmarks carry the same two counts the old hero showed as a
+             * pair of statistics — a red 4 over the notice board is the same
+             * fact as "Active notices: 4", read at a glance instead of parsed.
+             * See App\Support\World for what each landmark is and why the list
+             * lives in PHP rather than in the renderer.
+             */
+            'world' => World::payload($noticeCount, $disclosureCount),
+
             'pinned' => Announcement::query()->live()->where('is_pinned', true)
                 ->forTheFrontPage()->with('department')->limit(3)->get(),
 
@@ -39,10 +54,6 @@ class PublicPortalController extends Controller
                 ->with('file')->orderByDesc('published_at')->limit(5)->get(),
 
             'shelves' => $shelves,
-
-            // For the hero's "at a glance" line — real counts, not decoration.
-            'noticeCount' => Announcement::query()->live()->forTheFrontPage()->count(),
-            'disclosureCount' => array_sum(array_column($shelves, 'count')),
         ]);
     }
 

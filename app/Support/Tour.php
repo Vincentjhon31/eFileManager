@@ -28,6 +28,13 @@ class Tour
                 .'what you are still waiting to receive, and what is overdue. Everything else in this '
                 .'tour is one of those numbers, seen from a different angle.',
         ],
+        'compound' => [
+            'title' => 'The Compound',
+            'body' => 'The same list as this sidebar, drawn as a place: one building per screen you '
+                .'can open, and none for the ones you cannot. Nothing lives only in there — it is the '
+                .'scenic route to everywhere else, for the days when a list of twelve links is the '
+                .'last thing you want to read.',
+        ],
         'desk' => [
             'title' => 'My Desk',
             'body' => 'The queue, sorted into tabs instead of one long list — incoming, on your desk, '

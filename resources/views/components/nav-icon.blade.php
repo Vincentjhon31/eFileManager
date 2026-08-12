@@ -20,6 +20,8 @@
         'storage' => 'M4 6a8 3 0 0 0 16 0 8 3 0 0 0-16 0Zm0 0v12a8 3 0 0 0 16 0V6M4 12a8 3 0 0 0 16 0',
         // The workspace grid with a plus: the catalog is the workspace, curated.
         'apps' => 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm13 0v6m-3-3h6',
+        // Two roofs behind a gate: the compound is the rest of this list, drawn.
+        'compound' => 'M3 20h18M5 20v-7l4-3 4 3v7M15 20v-5l3-2 3 2v5M7 16h.01M11 16h.01M18 17h.01',
     ];
 @endphp
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"

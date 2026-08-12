@@ -41,6 +41,34 @@ class Navigation
                 'icon' => 'dashboard',
             ],
             [
+                /*
+                 * The scenic route to everything else in this list.
+                 *
+                 * Deliberately not given an entry in Compound::BUILDINGS, so the
+                 * compound never draws a building for itself — a door you walk
+                 * through to arrive where you already are.
+                 */
+                'label' => 'The Compound',
+                'route' => 'compound',
+                'visible' => true,
+                'group' => 'work',
+                'icon' => 'compound',
+
+                /*
+                 * The one link in this list that must be a real page load.
+                 *
+                 * Every other destination is a Livewire component, and
+                 * wire:navigate swaps them in without leaving the page. The
+                 * compound is plain Blade whose renderer is an ES module, and a
+                 * module is evaluated once per document — arriving by navigate
+                 * would swap in the markup and never run the code that draws
+                 * into it, leaving a blank stage. Leaving is cheaper than
+                 * teaching the renderer to survive a soft navigation it gains
+                 * nothing from.
+                 */
+                'navigate' => false,
+            ],
+            [
                 'label' => 'My Desk',
                 'route' => 'desk',
                 'visible' => $user->canAny([
@@ -142,6 +170,10 @@ class Navigation
                 'active' => request()->routeIs($item['active'] ?? $item['route'].'*'),
                 'group' => $item['group'],
                 'icon' => $item['icon'],
+
+                // Livewire's soft navigation, unless the destination has said it
+                // cannot survive one. See the note on The Compound above.
+                'navigate' => $item['navigate'] ?? true,
             ])
             ->values()
             ->all();

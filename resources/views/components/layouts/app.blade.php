@@ -113,7 +113,8 @@
                     <ul class="space-y-1">
                         @foreach ($items as $item)
                             <li>
-                                <a href="{{ $item['url'] }}" wire:navigate data-tour="{{ $item['icon'] }}"
+                                <a href="{{ $item['url'] }}" @if ($item['navigate']) wire:navigate @endif
+                                   data-tour="{{ $item['icon'] }}"
                                    @class([
                                        'flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium transition',
                                        'bg-blue-50 text-blue-700' => $item['active'],

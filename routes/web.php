@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\CompoundController;
 use App\Http\Controllers\DocumentFileController;
 use App\Http\Controllers\PublicFileController;
 use App\Http\Controllers\PublicPortalController;
@@ -102,6 +103,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
+
+    /*
+     * The compound — the same destinations as the sidebar, drawn as a place.
+     *
+     * Gated on nothing beyond being signed in, because the list it renders is
+     * Navigation::forCurrentUser() and is therefore already filtered to what
+     * this account may open. It is a second shelf for the same links, not a
+     * second set of them, and every door is still guarded where it leads.
+     */
+    Route::get('/compound', CompoundController::class)->name('compound');
 
     Route::get('/desk', Desk::class)
         ->middleware('can:documents.view.own_department')
