@@ -1108,6 +1108,7 @@ const WORLD_H = 300;
 const EDGE = 30; // breathing room at either end of the town
 const GAP = 18; // between landmarks
 const HORIZON = 180; // where the ground begins, below the treeline
+const SKY_BOTTOM = 168; // the last row that is unambiguously sky, above the trees
 const SEA_DEPTH = 30; // how far up from the shoreline the water reaches
 
 /*
@@ -1550,6 +1551,7 @@ function boot() {
     const labelsEl = document.getElementById('worldLabels');
     const tagEl = document.getElementById('worldTag');
     const hintEl = document.getElementById('worldHint');
+    const heroEl = stage.querySelector('.world-hero');
     const keynavEl = document.getElementById('worldKeynav');
 
     /* An offscreen twin of the canvas, painted with one flat colour per
@@ -1642,6 +1644,7 @@ function boot() {
 
         clampPan();
         drawLabels();
+        placeHero();
     }
 
     /* The topmost world row the canvas can show. Negative once there is extra
@@ -1653,6 +1656,43 @@ function boot() {
     /* Logical row -> where it lands in the stage's own coordinates. */
     function screenY(logicalY) {
         return canvasTop + (logicalY + skyLift) * scale;
+    }
+
+    /*
+     * Centre the title in the sky.
+     *
+     * Done here rather than in CSS because only this side knows where the sky
+     * ends: the horizon's position on screen depends on the scale, on how much
+     * extra sky the viewport bought, and on whether the top is being cropped —
+     * none of which a percentage in a stylesheet can see.
+     *
+     * Shrunk to fit before being placed. A title set at 8vw is taller than the
+     * sky on a laptop in landscape, and there is no position that fixes that —
+     * clamping alone would just pick the least bad overlap. Scaling it down keeps
+     * the whole thing inside the sky at any shape of viewport, and because the
+     * outline and the drop shadow are part of the type they scale with it.
+     *
+     * offsetHeight is the untransformed layout height, so it can be measured
+     * without first undoing last time's scale.
+     */
+    function placeHero() {
+        if (!heroEl) return;
+
+        const sky = screenY(SKY_BOTTOM);
+        const natural = heroEl.offsetHeight;
+        const room = sky - 24;
+
+        const k = natural > 0 && room > 0 ? Math.min(1, room / natural) : 1;
+        heroEl.style.transform = `translate(-50%, -50%) scale(${k.toFixed(3)})`;
+
+        /* Centred in the sky, and held clear of the treeline if the midpoint
+           would put it too low. After scaling both bounds are satisfiable. */
+        const half = (natural * k) / 2;
+        const highest = 12 + half;
+        const lowest = sky - 12 - half;
+        const middle = sky / 2;
+
+        heroEl.style.top = Math.round(Math.min(Math.max(middle, highest), Math.max(highest, lowest))) + 'px';
     }
 
     function maxPan() {
@@ -2065,6 +2105,15 @@ function boot() {
 
     fit();
     updateHint();
+
+    /* Again once the display face has actually arrived. placeHero measures the
+       title, and until Space Grotesk loads it is being measured in the fallback —
+       which is a different height, and would leave the title a few pixels off
+       centre for the rest of the visit. */
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(placeHero);
+    }
+
     requestAnimationFrame(frame);
 }
 

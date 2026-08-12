@@ -186,47 +186,113 @@
 */
 
 /*
-| The title, as a signboard in the corner.
+| The title, set in the middle of the sky.
 |
-| Centred and large it collided with the municipal hall, which is the tallest
-| thing in town and — being the way in for staff — the last thing that should be
-| covered. Off to one side and given a plaque of its own it stops competing with
-| the art and starts looking like part of it. The plaque also means the type
-| never has to be legible against whatever happens to be behind it.
+| It has been in three places now, and each move was forced by the one before it.
+| Centred and large it collided with the municipal hall — the tallest thing in
+| town, and the way in for staff, so the last thing that should be covered. Moved
+| into the corner on a cream plaque it stopped competing with the art, but a
+| plaque is a label, and a label in the corner is what a diagram has rather than
+| what a place has.
+|
+| Then the town got the whole viewport, and the sky it had been fighting over
+| turned into the largest empty space on the page. So the title sits in the middle
+| of that, and the plaque goes: floating type needs no box once there is nothing
+| behind it to read it against. What it needs instead is an edge, which is the
+| text-shadow below.
+|
+| The vertical position is set by the renderer, not here — see placeHero() in
+| world.js. Only it knows where the horizon has ended up.
 */
 .world-hero {
     position: absolute;
-    top: 14px;
-    left: 14px;
+    left: 50%;
+    top: 30%;
     z-index: 2;
-    padding: 10px 14px 11px;
-    background: var(--cream);
-    box-shadow: 0 0 0 2px var(--ink);
+    transform: translate(-50%, -50%);
+    width: max-content;
+    /*
+    | Wide enough for the longest title in the system to stay on one line.
+    |
+    | At 40rem "The Compound" wrapped, and two lines of 90px type pushed the
+    | subtitle down into the mountains. The clamp on the font size still handles
+    | narrow screens — it shrinks the type rather than folding it — so this only
+    | ever buys room where there is room to buy.
+    */
+    max-width: min(94%, 62rem);
+    text-align: center;
     pointer-events: none;
 }
 
+/*
+| A hard outline, built from eight offset copies rather than -webkit-text-stroke.
+|
+| The stroke property is smooth, and a smoothed edge on a letter sitting over
+| pixel art is the one thing that gives away that the type is not part of the
+| picture. Eight shadows at a whole number of pixels are not, and the ninth is the
+| drop — offset, unblurred, the same trick every card on the page uses.
+*/
 .world-hero h1 {
     margin: 0;
     font-family: var(--display);
     font-weight: 700;
-    font-size: clamp(22px, 3.4vw, 34px);
-    line-height: 1;
-    letter-spacing: -0.01em;
-    color: var(--ink);
+    font-size: clamp(38px, 8vw, 92px);
+    line-height: 0.98;
+    letter-spacing: -0.015em;
+    color: var(--cream);
+    text-shadow:
+        3px 0 0 var(--ink),
+        -3px 0 0 var(--ink),
+        0 3px 0 var(--ink),
+        0 -3px 0 var(--ink),
+        3px 3px 0 var(--ink),
+        -3px 3px 0 var(--ink),
+        3px -3px 0 var(--ink),
+        -3px -3px 0 var(--ink),
+        8px 9px 0 rgba(27, 31, 42, 0.32);
 }
 
 .world-hero p {
-    margin: 5px 0 0;
+    margin: 14px 0 0;
     font-family: var(--display);
     font-weight: 500;
-    font-size: clamp(9.5px, 1.3vw, 12px);
-    letter-spacing: 0.12em;
+    font-size: clamp(11px, 1.7vw, 17px);
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--navy);
+    color: var(--amber);
+    /*
+    | Outline only, no drop.
+    |
+    | The title carries an 8px offset shadow and reads as depth, because at 90px
+    | an 8px offset is a tenth of the letterform. The same treatment on 15px
+    | letterspaced caps produced a legible second copy of the words sitting below
+    | and to the right — a shadow has to be small relative to the type it belongs
+    | to or it stops being a shadow and becomes a mistake.
+    */
+    text-shadow:
+        2px 0 0 var(--ink),
+        -2px 0 0 var(--ink),
+        0 2px 0 var(--ink),
+        0 -2px 0 var(--ink),
+        2px 2px 0 var(--ink),
+        -2px 2px 0 var(--ink),
+        2px -2px 0 var(--ink),
+        -2px -2px 0 var(--ink);
 }
 
-/* The keyboard route starts where the plaque ends, so a focused landmark button
-   never appears underneath it. */
+/* A small amber bar between the two lines, to stop the subtitle reading as a
+   stray caption and start it reading as part of a sign. */
+.world-hero p::before {
+    content: '';
+    display: block;
+    width: clamp(44px, 8vw, 84px);
+    height: 5px;
+    margin: 0 auto 14px;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px var(--ink);
+}
+
+/* Out of the way of both the title and the corner buttons. */
 .world-keynav {
     top: auto;
     bottom: 78px;
