@@ -30,6 +30,7 @@ class DepartmentSeeder extends Seeder
                 [
                     'name' => $office['name'],
                     'short_name' => $office['short_name'],
+                    'summary' => $office['summary'] ?? null,
                     'is_onboarded' => $office['onboarded'] ?? false,
                     'is_external' => false,
                     'sort_order' => ($index + 1) * 10,
@@ -55,31 +56,57 @@ class DepartmentSeeder extends Seeder
      * Offices of the municipal government. Order roughly follows how they are
      * listed on an organisational chart, which is also how staff expect to see
      * them in a dropdown.
+     *
+     * The summary is what a citizen reads when they click that office's
+     * building in the compound, so it says what the office does for them rather
+     * than what it is called. Plain words: somebody who knew which office they
+     * needed would not be reading it.
      */
     private function internalOffices(): array
     {
         return [
-            ['code' => 'MO',      'short_name' => "Mayor's Office",        'name' => 'Office of the Municipal Mayor', 'onboarded' => true],
-            ['code' => 'MVO',     'short_name' => "Vice Mayor's Office",   'name' => 'Office of the Municipal Vice Mayor'],
-            ['code' => 'SB',      'short_name' => 'Sangguniang Bayan',     'name' => 'Office of the Sangguniang Bayan'],
-            ['code' => 'MPDO',    'short_name' => 'MPDO',                  'name' => 'Municipal Planning and Development Office'],
-            ['code' => 'MBO',     'short_name' => 'Budget Office',         'name' => 'Municipal Budget Office'],
-            ['code' => 'MACCO',   'short_name' => 'Accounting Office',     'name' => 'Municipal Accounting Office'],
-            ['code' => 'MTO',     'short_name' => "Treasurer's Office",    'name' => 'Municipal Treasurer\'s Office'],
-            ['code' => 'MASSO',   'short_name' => "Assessor's Office",     'name' => 'Municipal Assessor\'s Office'],
-            ['code' => 'MSWDO',   'short_name' => 'MSWDO',                 'name' => 'Municipal Social Welfare and Development Office'],
-            ['code' => 'MHO',     'short_name' => 'Health Office',         'name' => 'Municipal Health Office'],
-            ['code' => 'MENRO',   'short_name' => 'MENRO',                 'name' => 'Municipal Environment and Natural Resources Office'],
-            ['code' => 'MAGRO',   'short_name' => 'Agriculture Office',    'name' => 'Municipal Agriculture Office'],
-            ['code' => 'MEO',     'short_name' => 'Engineering Office',    'name' => 'Municipal Engineering Office'],
-            ['code' => 'LCR',     'short_name' => 'Civil Registrar',       'name' => 'Office of the Local Civil Registrar'],
-            ['code' => 'HRMO',    'short_name' => 'HRMO',                  'name' => 'Human Resource Management Office'],
-            ['code' => 'GSO',     'short_name' => 'General Services',      'name' => 'General Services Office'],
-            ['code' => 'BPLO',    'short_name' => 'BPLO',                  'name' => 'Business Permits and Licensing Office'],
-            ['code' => 'MDRRMO',  'short_name' => 'MDRRMO',                'name' => 'Municipal Disaster Risk Reduction and Management Office'],
-            ['code' => 'MTO-TOU', 'short_name' => 'Tourism Office',        'name' => 'Municipal Tourism Office'],
-            ['code' => 'LEGAL',   'short_name' => 'Legal Office',          'name' => 'Municipal Legal Office'],
-            ['code' => 'MIS',     'short_name' => 'MIS',                   'name' => 'Management Information Systems Office'],
+            ['code' => 'MO',      'short_name' => "Mayor's Office",        'name' => 'Office of the Municipal Mayor', 'onboarded' => true,
+                'summary' => 'The Mayor and the executive staff. Approves, signs and endorses; everything contentious ends up here.'],
+            ['code' => 'MVO',     'short_name' => "Vice Mayor's Office",   'name' => 'Office of the Municipal Vice Mayor',
+                'summary' => 'The Vice Mayor, who presides over the Sangguniang Bayan.'],
+            ['code' => 'SB',      'short_name' => 'Sangguniang Bayan',     'name' => 'Office of the Sangguniang Bayan',
+                'summary' => 'The municipal council. Passes ordinances and resolutions, and keeps their records.'],
+            ['code' => 'MPDO',    'short_name' => 'MPDO',                  'name' => 'Municipal Planning and Development Office',
+                'summary' => 'Development plans, zoning and the investment programme.'],
+            ['code' => 'MBO',     'short_name' => 'Budget Office',         'name' => 'Municipal Budget Office',
+                'summary' => 'Prepares the annual budget and certifies that money exists before it is spent.'],
+            ['code' => 'MACCO',   'short_name' => 'Accounting Office',     'name' => 'Municipal Accounting Office',
+                'summary' => 'Books, vouchers and the financial statements the disclosure board publishes.'],
+            ['code' => 'MTO',     'short_name' => "Treasurer's Office",    'name' => 'Municipal Treasurer\'s Office',
+                'summary' => 'Collects taxes and fees, and pays what the municipality owes. Where you settle a bill.'],
+            ['code' => 'MASSO',   'short_name' => "Assessor's Office",     'name' => 'Municipal Assessor\'s Office',
+                'summary' => 'Values real property and keeps the tax declarations behind every land title.'],
+            ['code' => 'MSWDO',   'short_name' => 'MSWDO',                 'name' => 'Municipal Social Welfare and Development Office',
+                'summary' => 'Assistance for families, children, senior citizens and persons with disabilities.'],
+            ['code' => 'MHO',     'short_name' => 'Health Office',         'name' => 'Municipal Health Office',
+                'summary' => 'The Rural Health Unit, immunisation, sanitation permits and health certificates.'],
+            ['code' => 'MENRO',   'short_name' => 'MENRO',                 'name' => 'Municipal Environment and Natural Resources Office',
+                'summary' => 'Solid waste, tree cutting permits and the coastal and forest resources.'],
+            ['code' => 'MAGRO',   'short_name' => 'Agriculture Office',    'name' => 'Municipal Agriculture Office',
+                'summary' => 'Support for farmers and fisherfolk: seed, extension work and the RSBSA listing.'],
+            ['code' => 'MEO',     'short_name' => 'Engineering Office',    'name' => 'Municipal Engineering Office',
+                'summary' => 'Building permits, occupancy permits and every road, bridge and public works project.'],
+            ['code' => 'LCR',     'short_name' => 'Civil Registrar',       'name' => 'Office of the Local Civil Registrar',
+                'summary' => 'Birth, marriage and death records, and the corrections to them.'],
+            ['code' => 'HRMO',    'short_name' => 'HRMO',                  'name' => 'Human Resource Management Office',
+                'summary' => 'Appointments, plantilla, leave and the service records of municipal employees.'],
+            ['code' => 'GSO',     'short_name' => 'General Services',      'name' => 'General Services Office',
+                'summary' => 'Procurement, supplies, the motor pool and the municipality\'s own property.'],
+            ['code' => 'BPLO',    'short_name' => 'BPLO',                  'name' => 'Business Permits and Licensing Office',
+                'summary' => 'New business permits and the January renewal. The first stop for anyone opening a shop.'],
+            ['code' => 'MDRRMO',  'short_name' => 'MDRRMO',                'name' => 'Municipal Disaster Risk Reduction and Management Office',
+                'summary' => 'Typhoon and flood preparedness, the emergency operations centre, and relief.'],
+            ['code' => 'MTO-TOU', 'short_name' => 'Tourism Office',        'name' => 'Municipal Tourism Office',
+                'summary' => 'Festivals, the beaches and the accreditation of local tourism establishments.'],
+            ['code' => 'LEGAL',   'short_name' => 'Legal Office',          'name' => 'Municipal Legal Office',
+                'summary' => 'Legal opinions for the municipality, and the review of contracts before they are signed.'],
+            ['code' => 'MIS',     'short_name' => 'MIS',                   'name' => 'Management Information Systems Office',
+                'summary' => 'The municipality\'s systems, this one included. Accounts, backups and the network.'],
         ];
     }
 

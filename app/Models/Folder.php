@@ -31,6 +31,16 @@ class Folder extends Model
     /** Where scans attached to tracked documents are filed. */
     public const DOCUMENTS_NAME = 'Document scans';
 
+    /**
+     * Where photographs of the town's landmarks are kept.
+     *
+     * They are ordinary uploads in an ordinary office drive — the office of
+     * whoever put them there — and what makes one of them public is a row in
+     * landmark_photos, not where it sits. Filed together so somebody clearing
+     * out a drive can see at a glance which pictures the front page is using.
+     */
+    public const TOWN_NAME = 'Town photos';
+
     /** @var array<string, mixed> */
     protected $attributes = [
         'visibility' => FolderVisibility::Department->value,

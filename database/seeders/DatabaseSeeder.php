@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             DepartmentSeeder::class,
+            CompoundSeeder::class,
             DocumentTypeSeeder::class,
             FolderSeeder::class,
             WorkspaceAppSeeder::class,

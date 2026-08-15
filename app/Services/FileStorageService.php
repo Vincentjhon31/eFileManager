@@ -69,6 +69,25 @@ class FileStorageService
         );
     }
 
+    /**
+     * Where photographs of the town's landmarks are filed.
+     *
+     * The office is whoever uploaded the picture, because a file in this system
+     * always belongs to an office and there is no such thing as a file that
+     * belongs to the municipality in general. That is fine: what makes one of
+     * these public is a landmark_photos row, and taking it off the front page
+     * leaves the picture where its office can still find it.
+     */
+    public function townPhotosFolderFor(Department $office, ?User $by = null): Folder
+    {
+        return $this->systemFolder(
+            $office,
+            Folder::TOWN_NAME,
+            $this->rootFolderFor($office, $by),
+            $by,
+        );
+    }
+
     private function systemFolder(Department $office, string $name, ?Folder $parent, ?User $by): Folder
     {
         return Folder::firstOrCreate(

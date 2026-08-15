@@ -154,6 +154,21 @@ class Navigation
                 'icon' => 'audit',
             ],
             [
+                /*
+                 * The photographs behind the drawn welcome page.
+                 *
+                 * Gated on settings.manage rather than public.publish: what it
+                 * changes is the municipality's front page, which is nobody's
+                 * office in particular, and it is next to Storage & Backups in
+                 * the same sense — MIS looks after the shape of the thing.
+                 */
+                'label' => 'The town',
+                'route' => 'admin.town.index',
+                'visible' => $user->can(Permission::SettingsManage->value),
+                'group' => 'admin',
+                'icon' => 'town',
+            ],
+            [
                 'label' => 'Storage & Backups',
                 'route' => 'admin.storage.index',
                 'visible' => $user->can(Permission::SettingsManage->value),

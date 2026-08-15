@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\LandmarkPhoto;
+use Illuminate\Support\Collection;
+
 /**
  * The town, as a place you can walk through.
  *
@@ -47,12 +50,66 @@ class World
     public static function payload(int $noticeCount, int $disclosureCount): array
     {
         return [
-            'places' => self::publicPlaces($noticeCount, $disclosureCount),
+            'places' => self::withPhotos(self::publicPlaces($noticeCount, $disclosureCount)),
             'intro' => self::intro(),
             'tips' => self::tips(),
             'title' => self::shortName(),
             'subtitle' => self::nameKind(),
         ];
+    }
+
+    /**
+     * Hang each landmark's photographs off it.
+     *
+     * Attached here rather than inside publicPlaces() because that list is also
+     * what the admin screen reads to know which landmarks exist, and a screen
+     * for uploading photos has no use for a query returning the photos it is
+     * about to change. One query for the whole town, grouped in memory: eight
+     * landmarks is not a number worth eight queries.
+     *
+     * A landmark with no photographs gets an empty array rather than no key, so
+     * the renderer never has to ask whether the field is there.
+     *
+     * @param  array<int, array<string, mixed>>  $places
+     * @return array<int, array<string, mixed>>
+     */
+    private static function withPhotos(array $places): array
+    {
+        $photos = LandmarkPhoto::query()
+            ->live()
+            ->whereIn('landmark', array_column($places, 'id'))
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->with('file')
+            ->get()
+            ->groupBy('landmark');
+
+        return array_map(function (array $place) use ($photos) {
+            $place['photos'] = $photos
+                ->get($place['id'], new Collection)
+                ->map(fn (LandmarkPhoto $photo) => $photo->forThePayload())
+                ->values()
+                ->all();
+
+            return $place;
+        }, $places);
+    }
+
+    /**
+     * Every landmark that can hold photographs, id => name.
+     *
+     * For the admin screen's picker. Built from the same array the town is
+     * drawn from, so a landmark added below appears there without anybody
+     * having to remember a second list. The counts are irrelevant to a name and
+     * are passed as zero.
+     *
+     * @return array<string, string>
+     */
+    public static function landmarks(): array
+    {
+        return collect(self::publicPlaces(0, 0))
+            ->pluck('name', 'id')
+            ->all();
     }
 
     /**
@@ -143,16 +200,36 @@ class World
                 'id' => 'hall',
                 'sprite' => 'hall',
                 'name' => 'Municipal Hall',
-                'blurb' => $signedIn ? 'Back to your desk' : 'Staff sign in',
+                'blurb' => $signedIn ? 'Back to your desk' : 'The offices, and the way in',
                 'kind' => 'link',
-                // Signed in, the front door opens onto the compound rather than
-                // straight onto a dashboard: somebody arriving through the drawn
-                // town should find the drawn hall behind it, not a table.
-                'url' => $signedIn ? route('compound') : route('login'),
+
+                /*
+                 * Straight through, no panel.
+                 *
+                 * Every other landmark opens a photograph of itself first,
+                 * because every other landmark is somewhere you might want to
+                 * look at. The hall is a door: what is behind it is a screen
+                 * asking who you are, and putting a picture of the building in
+                 * between is a step somebody has to get past to do the thing
+                 * they clicked the building to do.
+                 */
+                'straight' => true,
+
+                /*
+                 * The door, not what is behind it.
+                 *
+                 * It used to lead straight to the compound or straight to the
+                 * sign-in form depending on who was asking, which meant a
+                 * citizen clicking the hall of their own municipality was
+                 * handed a password box. There is something behind that door
+                 * for them now — the office directory — so the hall opens onto
+                 * a choice instead of onto an assumption.
+                 */
+                'url' => route('public.enter'),
                 'ground' => 'plaza',
                 'say' => $signedIn
                     ? 'Welcome back. The compound is through the front door.'
-                    : 'Municipal staff only past this door — everything else in town is open to all.',
+                    : 'The offices are through here. Come in and look around — you do not need an account.',
             ],
             [
                 'id' => 'fountain',
@@ -176,6 +253,25 @@ class World
                 'badge' => $noticeCount,
                 'ground' => 'plaza',
                 'say' => 'Suspensions, bidding notices, advisories. Pinned ones stay at the top.',
+            ],
+            [
+                /*
+                 * Next to the board on purpose. The board is what is pinned up
+                 * this week, sorted the way the office that fills it thinks —
+                 * by kind, by shelf, by fiscal year. The mailbox is the same
+                 * material in the order it came out, which is how somebody
+                 * walking past actually wants it.
+                 */
+                'id' => 'mailbox',
+                'sprite' => 'mailbox',
+                'name' => 'The Mailbox',
+                'blurb' => 'Everything posted lately, newest first',
+                'kind' => 'link',
+                'url' => route('public.mailbox'),
+                'badge' => $noticeCount + $disclosureCount,
+                'ground' => 'plaza',
+                'say' => 'Notices and disclosed documents, together, in the order they came out. '
+                    .'The flag is up when there is something new in it.',
             ],
             [
                 'id' => 'court',

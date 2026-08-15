@@ -14,124 +14,50 @@
 | than a blurry 12px smear. It also means the art is resolution-independent for
 | free — the same sprites are sharp on a phone at 2x and a monitor at 5x.
 |
-| Only fillRect. No gradients, no anti-aliased curves, no images to load. Circles
-| are drawn as stacked runs of pixels, because an arc() on a pixel canvas gives
-| you grey edge pixels that read as dirt at 4x. The one exception is the sea's
-| stroke-free wave rows, which are also rectangles.
+| Only fillRect. No gradients, no anti-aliased curves, nothing loaded from the
+| network. Circles are drawn as stacked runs of pixels, because an arc() on a
+| pixel canvas gives you grey edge pixels that read as dirt at 4x. The one
+| exception is the sea's stroke-free wave rows, which are also rectangles.
+|
+| The photographs in the landmark panel are not an exception to that. They are
+| <img> elements in the DOM above the canvas — never drawn into it — so the
+| canvas stays a thing this file composes out of rectangles, and the browser
+| does the decoding, the caching and the alt text.
+|
+| The palette, the drawing primitives and every part of the interface that is
+| not the drawing — the guide, the splash, the wipe, the landmark panel — are
+| shared with the compound's isometric renderer and live in ./world/. What is
+| left here is this projection: sprites drawn in side elevation, laid out left
+| to right, and a camera that only pans.
 |
 | Sections below:
-|   1. Palette and helpers
-|   2. Sprites — one function per landmark
-|   3. Layout — walking the place list into x positions
-|   4. Background — sky, mountains, ground, parallax
-|   5. The frame loop
-|   6. Hit testing, hover, panning
-|   7. Labels and the keyboard route
-|   8. The guide
-|   9. Splash, cloud wipe, motion preference
-|  10. Boot
+|   1. Sprites — one function per landmark
+|   2. Layout — walking the place list into x positions
+|   3. Background — sky, mountains, ground, parallax
+|   4. The frame loop
+|   5. Hit testing, hover, panning
+|   6. Labels and the keyboard route
+|   7. Boot
 |
 */
+
+import { C, disc, noise, r, shade } from './world/paint.js';
+import {
+    createGuide,
+    createPanel,
+    createWipe,
+    drawCornerIcon,
+    drawGearIcon,
+    drawGuideSprite,
+    readMotion,
+    startSplash,
+    wireMotionControls,
+} from './world/chrome.js';
 
 const root = document.documentElement;
 const stage = document.getElementById('worldStage');
 
-/* ---------------------------------------------------------------- 1. palette */
-
-const C = {
-    ink: '#1b1f2a',
-    cream: '#f4ecda',
-    amber: '#f2a93b',
-    rust: '#c1462f',
-    navy: '#1b3a6b',
-    teal: '#2e7d7b',
-
-    sky: '#8fc7d6',
-    skyHigh: '#7fbccd',
-    haze: '#cfe4e2',
-    cloud: 'rgba(255,255,255,.62)',
-
-    grass: '#6fa84f',
-    grassAlt: '#659c48',
-    grassDark: '#54823c',
-    plaza: '#c9bca2',
-    plazaAlt: '#c0b295',
-    road: '#b6a98f',
-    sand: '#dfc79b',
-    sandAlt: '#d6bc8e',
-    sea: '#3f86ac',
-    seaDeep: '#2f6e92',
-    foam: '#dff0f4',
-
-    wall: '#ede3d2',
-    wallShade: '#dccfb4',
-    roofTeal: '#2e7d7b',
-    roofRust: '#c1462f',
-    roofBrown: '#8e7048',
-    roofNipa: '#a5763c',
-    nipaDark: '#835c2d',
-    wood: '#8e6a46',
-    woodDark: '#6b4a2e',
-    stone: '#a9a293',
-    stoneDark: '#847e70',
-    glass: '#2c4a5e',
-    glassLit: '#3f6b84',
-
-    leaf1: '#3e7a33',
-    leaf2: '#4e9440',
-    leaf3: '#5fa84c',
-
-    rock: '#7d8a93',
-    rockDark: '#5d6a73',
-    rockLight: '#98a5ad',
-    snow: '#eef4f6',
-
-    skin: '#c98d5e',
-    skinDark: '#a97147',
-    barong: '#f2eddf',
-    hair: '#2b2118',
-    slacks: '#2f3542',
-};
-
-/* Every sprite draws through this. Rounding here rather than in forty call
-   sites is what keeps the grid honest — a rect at x=10.5 is what puts a soft
-   grey column down the middle of a wall. */
-function r(c, x, y, w, h, fill) {
-    c.fillStyle = fill;
-    c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
-}
-
-/* A filled circle in whole pixels: for each row, work out the half-width of the
-   chord and draw it as one rectangle. Cheap, and every edge lands on the grid. */
-function disc(c, cx, cy, rad, fill) {
-    c.fillStyle = fill;
-    for (let dy = -rad; dy <= rad; dy++) {
-        const half = Math.floor(Math.sqrt(rad * rad - dy * dy));
-        c.fillRect(Math.round(cx - half), Math.round(cy + dy), half * 2 + 1, 1);
-    }
-}
-
-function shade(hex, amt) {
-    const n = parseInt(hex.slice(1), 16);
-    const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
-    return (
-        '#' +
-        [16, 8, 0]
-            .map((s) => clamp(((n >> s) & 255) + amt).toString(16).padStart(2, '0'))
-            .join('')
-    );
-}
-
-/* A deterministic pseudo-random in [0,1) from an integer. Used for scattering
-   grass tufts and stars so the same seed always gives the same town — the world
-   must look identical after a resize, and Math.random() would reshuffle every
-   tuft on every reflow. */
-function noise(i) {
-    const x = Math.sin(i * 12.9898) * 43758.5453;
-    return x - Math.floor(x);
-}
-
-/* ---------------------------------------------------------------- 2. sprites */
+/* ---------------------------------------------------------------- 1. sprites */
 
 /*
  * One entry per sprite name used by App\Support\World.
@@ -466,6 +392,73 @@ const SPRITES = {
             r(c, x + 6, gy - 68, 90, 5, C.nipaDark);
             r(c, x + 11, gy - 73, 80, 5, C.roofNipa);
             r(c, x + 20, gy - 76, 62, 3, shade(C.roofNipa, 16));
+        },
+    },
+
+    /* -------------------------------------------------- the mailbox -------- */
+    /*
+     * The town's post box.
+     *
+     * Next to the notice board, because they are the same errand: things the
+     * hall has put out for anybody to read. The board is what is pinned up this
+     * week; the mailbox is everything that has come out lately, in the order it
+     * came out, notices and disclosed documents together.
+     *
+     * A narrow body with a domed lid on a single post — the silhouette does the
+     * telling here, the same way the court's roof does. And the flag stands up
+     * when there is post: a landmark that is different when there is something
+     * new is worth walking over to, which a red number on a label never quite
+     * manages.
+     */
+    mailbox: {
+        w: 68,
+        anchor: 86,
+        draw(c, x, gy, t, place) {
+            const waiting = !!(place && place.badge);
+
+            r(c, x + 18, gy - 2, 32, 2, 'rgba(20,20,10,.18)');
+
+            /* Concrete foot and the post out of it. */
+            r(c, x + 22, gy - 6, 22, 6, C.stone);
+            r(c, x + 22, gy - 6, 22, 2, C.rockLight);
+            r(c, x + 27, gy - 46, 11, 41, C.stoneDark);
+            r(c, x + 29, gy - 46, 3, 41, C.stone);
+
+            /* Body. */
+            r(c, x + 12, gy - 76, 42, 32, shade(C.rust, -26));
+            r(c, x + 14, gy - 74, 38, 29, C.rust);
+            r(c, x + 14, gy - 74, 38, 3, shade(C.rust, 18));
+            r(c, x + 49, gy - 74, 3, 29, shade(C.rust, -16));
+
+            /* Domed lid, as three stacked runs — the pixel way to a curve. */
+            r(c, x + 12, gy - 79, 42, 4, shade(C.rust, -14));
+            r(c, x + 17, gy - 82, 32, 3, C.rust);
+            r(c, x + 24, gy - 84, 18, 2, shade(C.rust, 22));
+
+            /* The slot, and the plate under it. Three shortening bars rather
+               than letters: at this size lettering is mud, and a shape that
+               suggests writing is more honest than one pretending to be it. */
+            r(c, x + 20, gy - 71, 26, 4, C.ink);
+            r(c, x + 20, gy - 71, 26, 1, shade(C.rust, -38));
+            r(c, x + 22, gy - 62, 22, 10, C.cream);
+            r(c, x + 22, gy - 62, 22, 2, shade(C.cream, -18));
+            for (let i = 0; i < 3; i++) {
+                r(c, x + 25, gy - 58 + i * 3, 16 - i * 4, 1, C.navy);
+            }
+
+            /* Door edge and handle. */
+            r(c, x + 46, gy - 58, 2, 11, shade(C.rust, -38));
+            r(c, x + 29, gy - 49, 7, 2, C.amber);
+
+            /*
+             * The flag. Up and amber when there is something to read, down and
+             * grey when there is not — and it bobs, so the eye catches it. Both
+             * states are drawn; nothing is conditional about the mast.
+             */
+            const up = waiting ? -9 - Math.round(Math.sin(t / 520)) : 0;
+            r(c, x + 55, gy - 68, 2, 16, C.stoneDark);
+            r(c, x + 57, gy - 62 + up, 9, 7, waiting ? C.amber : C.stone);
+            r(c, x + 57, gy - 62 + up, 9, 2, waiting ? shade(C.amber, 22) : C.rockLight);
         },
     },
 
@@ -1101,7 +1094,7 @@ const MOTIFS = {
     },
 };
 
-/* ----------------------------------------------------------------- 3. layout */
+/* ----------------------------------------------------------------- 2. layout */
 
 const GROUND_Y = 246; // where every sprite's feet land, in logical pixels
 const WORLD_H = 300;
@@ -1150,7 +1143,7 @@ function layout(places) {
     return { laid, width: cursor - GAP + EDGE };
 }
 
-/* ------------------------------------------------------------- 4. background */
+/* ------------------------------------------------------------- 3. background */
 
 /*
  * Sky, clouds, mountains, ground.
@@ -1534,7 +1527,7 @@ function drawBirds(c, t, w, panX, top) {
     });
 }
 
-/* ------------------------------------------------------------------- 5. boot */
+/* ------------------------------------------------------------------- 4. boot */
 
 function boot() {
     /* Announced first, so the CSS can swap the fallback list for the stage. It
@@ -1576,7 +1569,7 @@ function boot() {
     let started = performance.now();
     let elapsed = 0;
 
-    /* ------------------------------------------------------- 6. measurement */
+    /* ------------------------------------------------------- 5. measurement */
 
     /*
      * Fit the world to the stage.
@@ -1703,7 +1696,7 @@ function boot() {
         panX = Math.min(maxPan(), Math.max(0, panX));
     }
 
-    /* ------------------------------------------------------------ 7. drawing */
+    /* ------------------------------------------------------------ 6. drawing */
 
     function frame(now) {
         if (motion) elapsed = now - started;
@@ -1775,7 +1768,7 @@ function boot() {
         return d[3] > 200 && d[1] === 0 && d[2] === 0 && d[0] > 0 ? d[0] - 1 : -1;
     }
 
-    /* --------------------------------------------------------- 8. the labels */
+    /* --------------------------------------------------------- 7. the labels */
 
     /*
      * Names, in HTML over the canvas.
@@ -1833,28 +1826,39 @@ function boot() {
         tagEl.dataset.show = 'true';
     }
 
-    /* ------------------------------------------------------ 9. going places */
+    /* ------------------------------------------------------ 8. going places */
 
     /*
      * What a click on a landmark does.
      *
-     * A link leaves, behind the cloud wipe. Scenery has nowhere to go, so the
-     * guide says its line instead — which is the difference between decoration
-     * that ignores you and decoration that answers.
+     * Almost everything opens the panel, including the landmarks that lead
+     * somewhere. It used to be that a link left immediately and scenery only
+     * got a line from the guide, which made half the town worth clicking and
+     * half of it a redirect — and neither half ever showed you the place. Now
+     * the plaza shows you the plaza and then offers you the disclosure board,
+     * and the covered court shows you the covered court.
+     *
+     * The exception is a landmark that has said it is a door rather than a
+     * place — the Municipal Hall. See App\Support\World for why.
+     *
+     * The guide says his line either way. He is the one part of this that reads
+     * the same whether or not anybody has uploaded a photograph.
      */
     function visit(place) {
-        if (place.kind === 'link' && place.url) {
+        if (place.straight && place.url) {
             npc.say(place.say, { hold: true });
             wipe(() => {
                 window.location.href = place.url;
             });
+
             return;
         }
 
         npc.say(place.say);
+        panel.open(place);
     }
 
-    /* --------------------------------------------------------- 10. gestures */
+    /* --------------------------------------------------------- 9. gestures */
 
     /*
      * One gesture at a time, tracked without reference to which pointer it is.
@@ -1922,7 +1926,16 @@ function boot() {
            whatever is under it. */
         if (!wasDrag) {
             const i = hitTest(ev.clientX, ev.clientY);
-            if (i >= 0) visit(laid[i].place);
+
+            /* Sky, road, the gap between two landmarks: a click on nothing in
+               particular closes whatever is open. Somebody who has finished
+               looking at the covered court reaches for the picture's
+               surroundings before they reach for a close button. */
+            if (i >= 0) {
+                visit(laid[i].place);
+            } else {
+                panel.close();
+            }
         }
     };
 
@@ -1952,7 +1965,7 @@ function boot() {
         { passive: false },
     );
 
-    /* ------------------------------------------------- 11. keyboard route */
+    /* ------------------------------------------------- 10. keyboard route */
 
     /*
      * Every landmark, as a focusable control.
@@ -2006,13 +2019,7 @@ function boot() {
         tagEl.dataset.show = 'false';
     });
 
-    /* ------------------------------------------------------------ 12. motion */
-
-    function readMotion() {
-        const saved = localStorage.getItem('world:motion');
-        if (saved !== null) return saved === 'on';
-        return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
+    /* ------------------------------------------------------------ 11. motion */
 
     function applyMotion() {
         root.dataset.motion = motion ? 'on' : 'off';
@@ -2022,41 +2029,36 @@ function boot() {
         if (motion) started = performance.now() - elapsed;
     }
 
-    const motionToggle = document.getElementById('worldMotion');
-    motionToggle.checked = motion;
-    motionToggle.addEventListener('change', (ev) => {
-        motion = ev.target.checked;
-        localStorage.setItem('world:motion', motion ? 'on' : 'off');
-        applyMotion();
-    });
-
-    const gearBtn = document.getElementById('worldGear');
-    const gearPop = document.getElementById('worldPop');
-    gearBtn.addEventListener('click', () => {
-        gearPop.hidden = !gearPop.hidden;
-    });
-    document.addEventListener('click', (ev) => {
-        if (gearPop.hidden) return;
-        if (gearBtn.contains(ev.target) || gearPop.contains(ev.target)) return;
-        gearPop.hidden = true;
+    wireMotionControls({
+        initial: motion,
+        onChange: (on) => {
+            motion = on;
+            applyMotion();
+        },
     });
 
     applyMotion();
 
-    /* --------------------------------------------------------- 13. cloud wipe */
+    /* --------------------------------------------------------- 12. cloud wipe */
 
-    const wipeEl = document.getElementById('worldWipe');
+    const wipe = createWipe(() => motion);
 
-    function wipe(then) {
-        if (!motion) {
-            then();
-            return;
-        }
+    /* ------------------------------------------------------- 13. the panel */
 
-        wipeEl.classList.add('active');
-        requestAnimationFrame(() => wipeEl.classList.add('cover'));
-        setTimeout(then, 420);
-    }
+    /*
+     * What a place looks like, and the way in.
+     *
+     * Shared with the compound, markup and behaviour alike — see
+     * ./world/chrome.js. All this screen adds is what to do when one opens: the
+     * hover tag names whatever the pointer is over, and the pointer is now over
+     * a panel.
+     */
+    const panel = createPanel({
+        wipe,
+        onOpen: () => {
+            tagEl.dataset.show = 'false';
+        },
+    });
 
     /* ------------------------------------------------------------- 14. guide */
 
@@ -2082,6 +2084,7 @@ function boot() {
        nowhere useful to put one simply omits it. */
     const cornerIcon = document.getElementById('worldTrackIcon');
     if (cornerIcon) drawCornerIcon(cornerIcon);
+
 
     /* The hint has to be re-decided on every resize, not written once: whether
        there is anything off to the side depends on how wide the stage is, and a
@@ -2117,288 +2120,7 @@ function boot() {
     requestAnimationFrame(frame);
 }
 
-/* ------------------------------------------------------------- 17. the guide */
-
-/*
- * Mayor Mike.
- *
- * Types his lines rather than showing them, which is the difference between a
- * tooltip and somebody talking. The intro runs once per browser session for the
- * same reason the splash does — it is a greeting, and being greeted five times
- * is being nagged.
- */
-function createGuide({ el, bubble, textEl, intro, tips, motion }) {
-    let timer = null;
-    let mode = 'idle';
-    let index = 0;
-
-    function type(text, opts = {}) {
-        clearTimeout(timer);
-        bubble.classList.add('show');
-        textEl.textContent = '';
-
-        const done = () => {
-            if (opts.hold) return;
-            timer = setTimeout(() => bubble.classList.remove('show'), 3400);
-            if (opts.then) opts.then();
-        };
-
-        if (!motion()) {
-            textEl.textContent = text;
-            timer = setTimeout(done, 2400);
-            return;
-        }
-
-        el.classList.add('talking');
-        let i = 0;
-
-        (function step() {
-            textEl.textContent += text.charAt(i);
-            i += 1;
-
-            if (i < text.length) {
-                timer = setTimeout(step, 24);
-                return;
-            }
-
-            el.classList.remove('talking');
-            timer = setTimeout(done, 2400);
-        })();
-    }
-
-    function introStep() {
-        if (index < intro.length) {
-            const line = intro[index];
-            index += 1;
-            type(line, { then: introStep });
-            return;
-        }
-
-        mode = 'idle';
-        type('Click me any time for a tip.');
-    }
-
-    el.addEventListener('click', () => {
-        if (mode === 'intro') {
-            clearTimeout(timer);
-            el.classList.remove('talking');
-            index = intro.length;
-            mode = 'idle';
-            type('Click me any time for a tip.');
-            return;
-        }
-
-        type(tips[Math.floor(Math.random() * tips.length)]);
-    });
-
-    return {
-        begin() {
-            el.classList.add('ready');
-
-            /* Greeted already this session: he is there, he just does not start
-               talking again. */
-            if (sessionStorage.getItem('world:greeted')) {
-                mode = 'idle';
-                return;
-            }
-
-            sessionStorage.setItem('world:greeted', '1');
-            mode = 'intro';
-            setTimeout(introStep, 250);
-        },
-        say(text, opts) {
-            mode = 'idle';
-            if (text) type(text, opts);
-        },
-    };
-}
-
-/* -------------------------------------------------------------- 18. splash */
-
-function startSplash(title, subtitle, onDone, motion) {
-    const el = document.getElementById('worldSplash');
-    const bar = document.getElementById('worldSplashBar');
-
-    /* Straight past it on a return visit. The town is what they came back for. */
-    if (sessionStorage.getItem('world:splashed')) {
-        el.remove();
-        onDone();
-        return;
-    }
-
-    const letters = (node, text, delay) => {
-        node.textContent = '';
-        text.split('').forEach((ch, i) => {
-            const s = document.createElement('span');
-            s.textContent = ch === ' ' ? ' ' : ch;
-            s.style.animationDelay = delay + i * 0.045 + 's';
-            node.appendChild(s);
-        });
-    };
-
-    letters(document.getElementById('worldSplashTitle'), title, 0.15);
-    letters(document.getElementById('worldSplashSub'), subtitle, 0.15 + title.length * 0.045 + 0.1);
-
-    drawSeal(document.getElementById('worldSplashSeal'));
-
-    let finished = false;
-
-    function finish() {
-        if (finished) return;
-        finished = true;
-        sessionStorage.setItem('world:splashed', '1');
-        el.classList.add('done');
-        setTimeout(() => el.remove(), 600);
-        onDone();
-    }
-
-    el.addEventListener('click', finish);
-
-    let pct = 0;
-    const tick = setInterval(() => {
-        pct += motion() ? 4 : 30;
-        bar.style.width = Math.min(100, pct) + '%';
-
-        if (pct >= 100) {
-            clearInterval(tick);
-            setTimeout(finish, 250);
-        }
-    }, 60);
-}
-
-/* --------------------------------------------------------------- 19. icons */
-
-/* The seal on the splash: a rust square with an amber cross, the same shape as
-   the one on the hall's signage band, drawn large. */
-function drawSeal(canvas) {
-    const c = canvas.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    r(c, 0, 0, 32, 32, C.ink);
-    r(c, 2, 2, 28, 28, C.rust);
-    r(c, 13, 4, 6, 24, C.amber);
-    r(c, 4, 13, 24, 6, C.amber);
-    disc(c, 16, 16, 4, C.cream);
-    disc(c, 16, 16, 2, C.navy);
-}
-
-function drawGearIcon(canvas) {
-    const c = canvas.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.clearRect(0, 0, 16, 16);
-    disc(c, 8, 8, 6, '#7e8fa8');
-    for (let i = 0; i < 8; i++) {
-        const a = (i * Math.PI) / 4;
-        r(c, 8 + Math.cos(a) * 7 - 1, 8 + Math.sin(a) * 7 - 1, 2, 2, C.ink);
-    }
-    disc(c, 8, 8, 2, C.amber);
-}
-
-/*
- * The left-hand corner button's icon.
- *
- * Which one is decided by the markup, not here: the Blade component sets
- * data-icon, because what that corner leads to is a property of the screen the
- * world is embedded in — notices on the public page, the dashboard in the staff
- * compound — and the renderer has no business knowing either.
- */
-function drawCornerIcon(canvas) {
-    const c = canvas.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.clearRect(0, 0, 16, 16);
-
-    if (canvas.dataset.icon === 'home') {
-        /* A doorway with a step, and an arrow going in. */
-        r(c, 2, 2, 12, 13, C.navy);
-        r(c, 4, 4, 8, 11, C.cream);
-        r(c, 1, 14, 14, 2, C.navy);
-        r(c, 6, 8, 6, 2, C.navy);
-        r(c, 8, 6, 2, 2, C.navy);
-        r(c, 8, 10, 2, 2, C.navy);
-        r(c, 10, 7, 2, 4, C.navy);
-        return;
-    }
-
-    /* An envelope: the way to something waiting to be read. */
-    r(c, 1, 3, 14, 11, C.navy);
-    r(c, 2, 4, 12, 9, C.cream);
-    /* The flap, as two stepped diagonals meeting in the middle. */
-    for (let i = 0; i < 6; i++) {
-        r(c, 2 + i, 4 + i, 2, 1, C.navy);
-        r(c, 13 - i, 4 + i, 2, 1, C.navy);
-    }
-}
-
-/*
- * Mayor Mike himself, in a barong.
- *
- * Drawn rather than shipped as a PNG so he costs nothing to load, scales to any
- * pixel ratio, and can be recoloured by changing one entry in the palette.
- * 48 x 72 logical pixels, feet at the bottom edge — the CSS animates him about
- * that edge, so anything drawn below it would look like it was floating.
- */
-function drawGuideSprite(canvas) {
-    const c = canvas.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    c.clearRect(0, 0, 48, 72);
-
-    /* Shoes and slacks. */
-    r(c, 14, 68, 9, 4, C.ink);
-    r(c, 25, 68, 9, 4, C.ink);
-    r(c, 15, 50, 8, 18, C.slacks);
-    r(c, 25, 50, 8, 18, C.slacks);
-    r(c, 15, 50, 18, 3, shade(C.slacks, -16));
-
-    /* The barong: cream, long-sleeved, with the vertical embroidery panel it
-       is known for and a hem that sits below the belt. */
-    r(c, 12, 28, 24, 24, C.barong);
-    r(c, 12, 28, 24, 3, shade(C.barong, -14));
-    r(c, 12, 49, 24, 3, shade(C.barong, -20));
-    r(c, 8, 30, 5, 18, C.barong);
-    r(c, 35, 30, 5, 18, C.barong);
-    r(c, 8, 46, 5, 3, shade(C.barong, -16));
-    r(c, 35, 46, 5, 3, shade(C.barong, -16));
-    /* Embroidery: two columns of small marks either side of the buttons. */
-    for (let i = 0; i < 5; i++) {
-        r(c, 19, 32 + i * 4, 2, 2, '#ded4bd');
-        r(c, 27, 32 + i * 4, 2, 2, '#ded4bd');
-        r(c, 23, 33 + i * 4, 1, 1, C.stoneDark);
-    }
-    /* Collar. */
-    r(c, 18, 26, 12, 3, shade(C.barong, -10));
-    r(c, 20, 29, 3, 4, C.skinDark);
-    r(c, 25, 29, 3, 4, C.skinDark);
-
-    /* Hands. */
-    r(c, 8, 48, 5, 5, C.skin);
-    r(c, 35, 48, 5, 5, C.skin);
-
-    /* Head. */
-    r(c, 17, 26, 14, 3, C.skinDark);
-    r(c, 16, 12, 16, 15, C.skin);
-    r(c, 16, 12, 16, 3, shade(C.skin, 12));
-    r(c, 15, 16, 2, 6, C.skin);
-    r(c, 31, 16, 2, 6, C.skin);
-
-    /* Hair, with a side part. */
-    r(c, 15, 8, 18, 6, C.hair);
-    r(c, 14, 11, 3, 6, C.hair);
-    r(c, 31, 11, 3, 6, C.hair);
-    r(c, 22, 8, 8, 3, shade(C.hair, 16));
-
-    /* Face. Two dark pixels and a short line is a face at this size; anything
-       more becomes a smudge. */
-    r(c, 20, 18, 2, 2, C.ink);
-    r(c, 26, 18, 2, 2, C.ink);
-    r(c, 21, 22, 6, 1, C.skinDark);
-    r(c, 22, 23, 4, 1, C.skinDark);
-
-    /* A rolled document under one arm — he is, after all, the mayor. */
-    r(c, 36, 40, 4, 14, C.cream);
-    r(c, 36, 40, 4, 2, shade(C.cream, -18));
-    r(c, 36, 46, 4, 1, C.rust);
-}
-
-/* ----------------------------------------------------------------- 20. start */
+/* ----------------------------------------------------------------- 17. start */
 
 /*
  * Last, not first.

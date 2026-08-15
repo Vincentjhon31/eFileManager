@@ -3,9 +3,9 @@
         <x-world :payload="$world"
                  heading="Welcome"
                  :subheading="config('lgu.name')"
-                 :corner-href="route('public.announcements')"
-                 corner-label="Notices"
-                 corner-icon="track" />
+                 :corner-href="route('public.mailbox')"
+                 corner-label="Mailbox"
+                 corner-icon="mailbox" />
     </x-slot:world>
 
     {{--

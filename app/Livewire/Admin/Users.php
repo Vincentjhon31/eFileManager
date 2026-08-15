@@ -36,6 +36,17 @@ class Users extends Component
     #[Url(except: '')]
     public string $departmentFilter = '';
 
+    /**
+     * '', 'requested', 'active' or 'inactive'.
+     *
+     * "Requested" is inactive *and* never given a role — which is exactly what
+     * App\Http\Controllers\Auth\AccountRequestController writes and nothing else
+     * does. A deactivated employee keeps the role they had, so the two states
+     * stay tellable apart without a column for it.
+     */
+    #[Url(except: '')]
+    public string $status = '';
+
     public ?int $editingId = null;
 
     public string $employee_no = '';
@@ -267,12 +278,18 @@ class Users extends Component
         $users = $this->scopedQuery()
             ->with(['department', 'roles'])
             ->when($this->departmentFilter !== '', fn ($q) => $q->where('department_id', $this->departmentFilter))
+            ->when($this->status === 'requested', fn ($q) => $q->where('is_active', false)->whereDoesntHave('roles'))
+            ->when($this->status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($this->status === 'inactive', fn ($q) => $q->where('is_active', false)->whereHas('roles'))
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
                 $q->where(fn ($sub) => $sub->where('name', 'like', $term)
                     ->orWhere('email', 'like', $term)
                     ->orWhere('employee_no', 'like', $term));
             })
+            // Somebody waiting to be set up is the reason this screen is open,
+            // so they come first whatever else is being looked at.
+            ->orderByRaw('CASE WHEN is_active = 0 THEN 0 ELSE 1 END')
             ->orderBy('name')
             ->paginate($this->perPage());
 
@@ -280,6 +297,13 @@ class Users extends Component
             'users' => $users,
             'departments' => Department::internal()->orderBy('sort_order')->get(),
             'roles' => RoleEnum::all(),
+
+            // Counted through the same scope the list uses, so a department
+            // administrator's queue is their own office's and nobody else's.
+            'requested' => $this->scopedQuery()
+                ->where('is_active', false)
+                ->whereDoesntHave('roles')
+                ->count(),
         ])->layout('components.layouts.app', ['title' => 'Users']);
     }
 }

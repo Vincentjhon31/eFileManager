@@ -84,6 +84,7 @@
         <ul>
             @foreach ([
                 ['Home', 'public.home'],
+                ['Mailbox', 'public.mailbox'],
                 ['Notices', 'public.announcements'],
                 ['Full Disclosure', 'public.disclosure'],
             ] as [$label, $name])

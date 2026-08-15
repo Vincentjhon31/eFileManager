@@ -25,6 +25,14 @@ use Illuminate\View\View;
  */
 class PublicPortalController extends Controller
 {
+    /**
+     * How much post the mailbox holds.
+     *
+     * Two queries of this size are merged and the total is cut back to it
+     * again, so the page is bounded whichever side is busier.
+     */
+    private const MAILBOX_ITEMS = 30;
+
     public function home(): View
     {
         $shelves = $this->shelfCounts();
@@ -54,6 +62,40 @@ class PublicPortalController extends Controller
                 ->with('file')->orderByDesc('published_at')->limit(5)->get(),
 
             'shelves' => $shelves,
+        ]);
+    }
+
+    /**
+     * The mailbox: everything the hall has put out, in one list.
+     *
+     * The town has a notice board and a disclosure fountain, and both are
+     * organised the way the office that fills them thinks — by kind, by shelf,
+     * by fiscal year. A citizen walking past does not think in shelves. They
+     * think "has anything come out lately", which is one list in date order,
+     * and that is what a mailbox is.
+     *
+     * Deliberately not paginated and deliberately not searchable. This is the
+     * recent post, not the archive: past the end of it are the two full
+     * listings, each of which already does searching and filtering properly.
+     * Merging in PHP rather than as a union query is what that bound buys —
+     * one page of each table, sorted together, and no cross-table pagination
+     * to get subtly wrong.
+     */
+    public function mailbox(): View
+    {
+        $notices = Announcement::query()->live()->forTheFrontPage()
+            ->with('department')->limit(self::MAILBOX_ITEMS)->get();
+
+        $files = PublicFile::query()->live()->onTheBoard()
+            ->with('file')->orderByDesc('published_at')->limit(self::MAILBOX_ITEMS)->get();
+
+        return view('public.mailbox', [
+            'items' => $notices->concat($files)
+                ->sortByDesc('published_at')
+                ->take(self::MAILBOX_ITEMS)
+                ->values(),
+            'noticeCount' => $notices->count(),
+            'fileCount' => $files->count(),
         ]);
     }
 

@@ -22,6 +22,8 @@
         'apps' => 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm13 0v6m-3-3h6',
         // Two roofs behind a gate: the compound is the rest of this list, drawn.
         'compound' => 'M3 20h18M5 20v-7l4-3 4 3v7M15 20v-5l3-2 3 2v5M7 16h.01M11 16h.01M18 17h.01',
+        // A picture with a horizon and a sun in it: the town, photographed.
+        'town' => 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm12.5 4.5h.01M3 15l4.5-4 4 3.5L15 11l6 5',
     ];
 @endphp
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"

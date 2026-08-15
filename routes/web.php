@@ -1,10 +1,17 @@
 <?php
 
+use App\Http\Controllers\Auth\AccountRequestController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\CompoundBuildingController;
 use App\Http\Controllers\CompoundController;
+use App\Http\Controllers\CompoundLandController;
+use App\Http\Controllers\CompoundLayoutController;
+use App\Http\Controllers\CompoundTileController;
 use App\Http\Controllers\DocumentFileController;
+use App\Http\Controllers\GateController;
+use App\Http\Controllers\LandmarkPhotoController;
 use App\Http\Controllers\PublicFileController;
 use App\Http\Controllers\PublicPortalController;
 use App\Http\Controllers\RoutingSlipController;
@@ -14,6 +21,7 @@ use App\Livewire\Admin\AuditTrail;
 use App\Livewire\Admin\Departments;
 use App\Livewire\Admin\Disclosures;
 use App\Livewire\Admin\Storage;
+use App\Livewire\Admin\Town;
 use App\Livewire\Admin\Users;
 use App\Livewire\Admin\WorkspaceApps;
 use App\Livewire\Alerts;
@@ -50,6 +58,21 @@ use Illuminate\Support\Facades\Route;
 
 Route::name('public.')->group(function () {
     Route::get('/', [PublicPortalController::class, 'home'])->name('home');
+    // The mailbox: recent notices and disclosures in one date-ordered list,
+    // for somebody who wants to know what is new rather than what shelf it is
+    // on. The two full listings below are still where searching happens.
+    Route::get('/mailbox', [PublicPortalController::class, 'mailbox'])->name('mailbox');
+
+    /*
+     * The door of the Municipal Hall.
+     *
+     * Where clicking the hall in the drawn town lands, signed in or not. Three
+     * doors rather than one, because there is now something behind it for
+     * somebody with no account: see App\Http\Controllers\GateController.
+     */
+    Route::get('/enter', [GateController::class, 'show'])->name('enter');
+    Route::post('/enter/visitor', [GateController::class, 'visitor'])->name('visitor');
+
     Route::get('/notices', [PublicPortalController::class, 'announcements'])->name('announcements');
     Route::get('/notices/{announcement}', [PublicPortalController::class, 'announcement'])->name('announcement');
     Route::get('/disclosure', [PublicPortalController::class, 'disclosure'])->name('disclosure');
@@ -59,6 +82,80 @@ Route::name('public.')->group(function () {
     Route::get('/disclosure/{publicFile}/download', [PublicFileController::class, 'download'])
         ->middleware('throttle:60,1')
         ->name('download');
+
+    /*
+     * A photograph of a landmark, for the panel that opens when somebody
+     * clicks one.
+     *
+     * Takes a landmark_photos id, never a file id — that row is the decision
+     * to show the picture. Throttled higher than the disclosure board because
+     * a single panel legitimately asks for several of these at once, and a
+     * visitor flicking through a carousel is doing what the page is for.
+     */
+    Route::get('/town/photo/{landmarkPhoto}', [LandmarkPhotoController::class, 'show'])
+        ->middleware('throttle:240,1')
+        ->name('photo');
+});
+
+/*
+|--------------------------------------------------------------------------
+| The compound
+|--------------------------------------------------------------------------
+|
+| Outside every group on purpose, and outside `auth` in particular.
+|
+| It used to be a signed-in employee's own screens drawn as buildings, and there
+| was nothing in it for anybody else. The buildings are now the municipality's
+| offices — what each does, who heads it, what it has posted — which is a
+| directory, and a directory that turns strangers away is a locked noticeboard.
+|
+| Nothing behind a door has been opened by this. Compound::places() offers links
+| only into the signed-in user's own office, and only the ones the sidebar would
+| already have shown them; every destination still has its own middleware.
+|
+| Named without a prefix because it is neither a public.* page nor a staff one.
+| It is the same place either way, and the difference is only what it offers you
+| when you are standing in it.
+|
+*/
+Route::get('/compound', CompoundController::class)->name('compound');
+
+/*
+ * Arranging it. The one write in the drawn half of this system, gated on the
+ * same permission as Storage & Backups and System settings — the compound is
+ * the municipality's own picture of itself, not any one office's business.
+ */
+Route::middleware(['auth', 'can:settings.manage'])->group(function () {
+    Route::patch('/compound/layout', CompoundLayoutController::class)->name('compound.layout');
+
+    // Taking in another block of ground, and giving one back. What may be
+    // given back is three short conditions, all in Compound::removable().
+    Route::post('/compound/land', [CompoundLandController::class, 'store'])->name('compound.land');
+
+    Route::delete('/compound/land', [CompoundLandController::class, 'destroy'])
+        ->name('compound.land.destroy');
+
+    /*
+     * Putting a building up, changing one, and taking one down.
+     *
+     * Creating a whole new office through the first of these needs
+     * departments.manage as well, which the controller checks: a building is a
+     * drawing decision, and an office code inside every tracking number it will
+     * ever issue is not. Changing one does not — a redesign brings no office
+     * into existence and cannot move a building from one office to another.
+     */
+    Route::post('/compound/buildings', [CompoundBuildingController::class, 'store'])
+        ->name('compound.buildings.store');
+
+    Route::patch('/compound/buildings/{building}', [CompoundBuildingController::class, 'update'])
+        ->name('compound.buildings.update');
+
+    Route::delete('/compound/buildings/{building}', [CompoundBuildingController::class, 'destroy'])
+        ->name('compound.buildings.destroy');
+
+    // Laying a path and lifting one. A batch, because it is painted with a
+    // dragged brush and one request per cell would be forty of them.
+    Route::patch('/compound/tiles', CompoundTileController::class)->name('compound.tiles');
 });
 
 /*
@@ -71,6 +168,21 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
 
+    /*
+     * Asking MIS for an account.
+     *
+     * Not registration: what this writes is an inactive, role-less row that
+     * EnsureUserIsActive already refuses at every door. Throttled hard, because
+     * the form names the offices of a municipality and a script left pointed at
+     * it would fill the users table with plausible-looking rows for somebody in
+     * MIS to sort through.
+     */
+    Route::get('/request-account', [AccountRequestController::class, 'create'])
+        ->name('account.request');
+
+    Route::post('/request-account', [AccountRequestController::class, 'store'])
+        ->middleware('throttle:5,60')
+        ->name('account.request.store');
 });
 
 /*
@@ -103,16 +215,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
-
-    /*
-     * The compound — the same destinations as the sidebar, drawn as a place.
-     *
-     * Gated on nothing beyond being signed in, because the list it renders is
-     * Navigation::forCurrentUser() and is therefore already filtered to what
-     * this account may open. It is a second shelf for the same links, not a
-     * second set of them, and every door is still guarded where it leads.
-     */
-    Route::get('/compound', CompoundController::class)->name('compound');
 
     Route::get('/desk', Desk::class)
         ->middleware('can:documents.view.own_department')
@@ -223,6 +325,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/apps', WorkspaceApps::class)
             ->middleware('can:apps.manage')
             ->name('apps.index');
+
+        // The photographs behind the drawn welcome page. Same gate as Storage &
+        // Backups: it changes the municipality's front page rather than any one
+        // office's records.
+        Route::get('/town', Town::class)
+            ->middleware('can:settings.manage')
+            ->name('town.index');
 
         Route::get('/storage', Storage::class)
             ->middleware('can:settings.manage')

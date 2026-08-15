@@ -139,6 +139,23 @@
                 @endforeach
             </select>
         @endif
+
+        <select wire:model.live="status"
+                class="rounded-lg border-slate-300 shadow-sm focus:border-blue-600 focus:ring-blue-600">
+            <option value="">Everyone</option>
+            <option value="requested">Waiting to be set up</option>
+            <option value="active">Active</option>
+            <option value="inactive">Deactivated</option>
+        </select>
+
+        {{-- The queue. Only shown when there is one — a badge that always reads
+             zero is furniture. --}}
+        @if ($requested > 0 && $status !== 'requested')
+            <button wire:click="$set('status', 'requested')"
+                    class="rounded-lg bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-200">
+                {{ $requested }} {{ Str::plural('person', $requested) }} waiting to be set up →
+            </button>
+        @endif
     </div>
 
     {{-- Table --}}
@@ -160,9 +177,19 @@
                             <span class="font-medium text-slate-900">{{ $user->name }}</span>
                             <span class="block text-xs text-slate-500">{{ $user->email }}</span>
                             @unless ($user->is_active)
-                                <span class="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                                    Deactivated
-                                </span>
+                                {{-- An account that has never had a role is one
+                                     somebody asked for and nobody has set up
+                                     yet. Saying "Deactivated" about it would
+                                     read as a punishment rather than a queue. --}}
+                                @if ($user->roles->isEmpty())
+                                    <span class="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                                        Requested — not set up
+                                    </span>
+                                @else
+                                    <span class="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                        Deactivated
+                                    </span>
+                                @endif
                             @endunless
                         </td>
                         <td class="px-4 py-3 text-slate-600">

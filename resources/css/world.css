@@ -316,6 +316,15 @@
     max-width: calc(100% - 24px);
 }
 
+/* The one thing in the hint that is not a hint. On the compound the wheel
+   belongs to the map, so the list of offices below needs a way to be reached
+   that is not scrolling. */
+.world-hint a {
+    color: var(--navy);
+    pointer-events: auto;
+    text-underline-offset: 3px;
+}
+
 /*
 |------------------------------------------------------------------------------
 | The hover tag
@@ -842,6 +851,1469 @@
 
 /*
 |------------------------------------------------------------------------------
+| The compound
+|------------------------------------------------------------------------------
+|
+| Same stage, different projection, and three things follow from that.
+|
+| The map is centred rather than anchored to the bottom, because there is no
+| ground line in an isometric view — the whole diamond is the subject and
+| cropping it from the top would take the back row of offices off the screen.
+|
+| The sky is painted by the renderer, into the canvas, so the stage's own
+| horizon gradient would show as a band behind it. Flat colour here instead.
+|
+| And the title moves out of the middle. In the town it sits in the sky, which
+| is the largest empty space on the page; over a map there is no empty space,
+| and ninety pixels of type across the middle of the compound covers four
+| offices.
+|
+*/
+
+/* The same field green the renderer paints under everything, so a frame the
+   canvas has not caught up with is still country rather than a flash of sky. */
+.world-stage[data-scene='compound'] {
+    background: var(--field);
+    /* The map takes both axes: it is dragged in two dimensions and pinched, and
+       the browser must not claim either gesture for its own scrolling. */
+    touch-action: none;
+}
+
+.world-stage[data-scene='compound'] .world-canvas {
+    top: 0;
+    bottom: auto;
+    cursor: default;
+}
+
+/* While the compound is being arranged the labels are in the way — they sit
+   over the roofs somebody is trying to grab, and the names are not the point
+   any more. */
+.world-stage[data-arranging='true'] .world-labels {
+    opacity: 0.25;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The dock
+|------------------------------------------------------------------------------
+|
+| One bar of drawn icons along the bottom of the map, and the compound's only
+| controls. It replaced a row of text buttons in the masthead and two more
+| stranded in opposite corners of the screen — three places to look for the same
+| kind of thing, none of them where the hand already was.
+|
+| Icons with a word under each, not icons alone. A dock of unlabelled pixel
+| glyphs is a puzzle, and this is used by people who did not choose to use it.
+|
+*/
+
+.world-dock {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    z-index: 6;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    max-width: calc(100% - 24px);
+    padding: 6px;
+    background: var(--cream);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        0 4px 0 rgba(27, 31, 42, 0.25);
+    overflow-x: auto;
+}
+
+.world-dock-item {
+    position: relative;
+    display: flex;
+}
+
+.world-dock-btn {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 62px;
+    padding: 7px 8px 6px;
+    border: 0;
+    background: transparent;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 10.5px;
+    line-height: 1;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.1s steps(2);
+}
+
+/* The two zoom buttons carry no word, so they need no room for one. */
+.world-dock-btn.tight {
+    min-width: 40px;
+    padding: 7px 6px;
+}
+
+.world-dock-btn canvas {
+    image-rendering: pixelated;
+    width: 22px;
+    height: 22px;
+}
+
+.world-dock-btn:hover:not(:disabled),
+.world-dock-btn:focus-visible {
+    transform: translateY(-2px);
+    background: var(--ground);
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.world-dock-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+/*
+| Arranging is a mode, not an action, so its button stays lit while it is on.
+|
+| After the hover rule and matching its specificity, or hovering the button you
+| are already inside would light it the ordinary way and the mode would stop
+| looking like a mode at exactly the moment you were about to leave it.
+*/
+.world-dock-btn[aria-pressed='true']:not(:disabled) {
+    background: var(--amber);
+    box-shadow: 0 0 0 2px var(--ink);
+}
+
+.world-dock-sep {
+    flex: 0 0 auto;
+    width: 3px;
+    margin: 4px 2px;
+    background: var(--rule);
+}
+
+/* The popover hangs off its button rather than off the bar, so it stays over
+   the thing it belongs to however the dock has wrapped or scrolled. */
+.world-dock-item .world-pop {
+    right: auto;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%);
+}
+
+/*
+|------------------------------------------------------------------------------
+| The sheet
+|------------------------------------------------------------------------------
+|
+| One panel, three jobs: finding an office, putting a building up, and taking
+| one down. A column down the left of the map rather than a box in the middle of
+| it, because all three are things you do *to* the compound and you have to be
+| able to see the compound while you do them.
+|
+*/
+
+.compound-sheet {
+    position: fixed;
+    left: 16px;
+    top: 92px;
+    bottom: 116px;
+    z-index: 20;
+    width: min(320px, calc(100% - 32px));
+    display: flex;
+    flex-direction: column;
+    background: var(--slate);
+    color: var(--cream);
+    box-shadow:
+        0 0 0 3px var(--ink),
+        0 0 0 6px var(--amber);
+    transform: translateX(-12px);
+    opacity: 0;
+    transition:
+        transform 0.14s steps(3),
+        opacity 0.14s steps(3);
+}
+
+.compound-sheet[hidden] {
+    display: none;
+}
+
+.compound-sheet[data-open='true'] {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.compound-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px 10px 14px;
+    border-bottom: 3px solid var(--line);
+}
+
+.compound-sheet-head h2 {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+.compound-sheet-head-3 {
+    margin: 14px 0 6px;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+}
+
+.compound-sheet-head-3:first-child {
+    margin-top: 0;
+}
+
+.compound-sheet-x {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    cursor: pointer;
+}
+
+.compound-sheet-x:hover,
+.compound-sheet-x:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.compound-sheet-x canvas {
+    image-rendering: pixelated;
+    width: 14px;
+    height: 14px;
+}
+
+.compound-sheet-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 12px 14px 16px;
+}
+
+/* -------------------------------------------------------------- finding -- */
+
+.compound-search,
+.compound-input,
+.compound-select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    background: var(--cream);
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.compound-input,
+.compound-select {
+    margin-top: 6px;
+}
+
+.compound-search:focus,
+.compound-input:focus,
+.compound-select:focus {
+    outline: var(--pix) solid var(--amber);
+    outline-offset: 1px;
+}
+
+.compound-results {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.compound-result {
+    width: 100%;
+    display: block;
+    padding: 8px 10px;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    text-align: left;
+    cursor: pointer;
+    transition: box-shadow 0.1s steps(2);
+}
+
+.compound-result:hover,
+.compound-result:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.compound-result b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--cream);
+}
+
+.compound-result span {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+}
+
+.compound-empty,
+.compound-note {
+    margin: 10px 0 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
+/* ------------------------------------------------------------ putting up -- */
+
+/*
+| The tabs.
+|
+| Offices, shelter, civic, planting, walls — and then ground and land, which are
+| not things you place at all. They are in the same strip because "make the
+| compound bigger" and "put something on it" are the same errand, and two panels
+| for one errand is one panel too many.
+|
+| Drawn, not written. Seven small text pills wrapped onto a second line and read
+| as a layout that had broken rather than one that had been chosen, and on a
+| screen whose whole subject is what things look like they were the one part
+| showing you nothing. Each tab is now a picture of what is inside it, on a
+| fixed four-column grid: two even rows of four and three, which wraps because
+| it was told to rather than because it ran out of room.
+*/
+.compound-cats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    margin-bottom: 14px;
+}
+
+.compound-cat {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 0 5px;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    text-align: center;
+    cursor: pointer;
+}
+
+.compound-cat canvas {
+    image-rendering: pixelated;
+    width: 100%;
+    height: auto;
+    margin-bottom: 4px;
+}
+
+.compound-cat b {
+    display: block;
+    padding: 0 3px;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 10.5px;
+    line-height: 1.15;
+    color: var(--muted);
+}
+
+.compound-cat:hover,
+.compound-cat:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.compound-cat[data-on='true'] {
+    background: var(--navy);
+    box-shadow: 0 0 0 3px var(--amber);
+}
+
+.compound-cat[data-on='true'] b {
+    color: var(--amber);
+}
+
+/*
+| The pieces, drawn rather than named.
+|
+| This was a grid of words, which on a screen whose entire subject is what
+| things look like told nobody the difference between a hall and an annex. Each
+| tile now draws the actual piece with the actual code.
+*/
+.compound-templates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+.compound-template {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 0 6px;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    text-align: center;
+    cursor: pointer;
+}
+
+.compound-template canvas {
+    image-rendering: pixelated;
+    width: 100%;
+    height: auto;
+    /* The drawing is the top of the tile, edge to edge, with the name under it
+       like a label under a specimen. */
+    margin-bottom: 5px;
+}
+
+.compound-template b {
+    display: block;
+    padding: 0 6px;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11.5px;
+    line-height: 1.2;
+    color: var(--cream);
+}
+
+.compound-template[data-on='true'] {
+    box-shadow: 0 0 0 3px var(--amber);
+}
+
+.compound-template[data-on='true'] b {
+    color: var(--amber);
+}
+
+/* --------------------------------------------------------------- ground -- */
+
+.compound-brushes {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 10px;
+}
+
+.compound-brush {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0 10px;
+    padding: 6px 8px;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    text-align: left;
+    cursor: pointer;
+}
+
+.compound-brush canvas {
+    grid-row: 1 / 3;
+    image-rendering: pixelated;
+}
+
+.compound-brush b {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--cream);
+}
+
+.compound-brush span {
+    font-family: var(--display);
+    font-size: 10.5px;
+    line-height: 1.3;
+    color: var(--muted-2);
+}
+
+.compound-brush[data-on='true'] {
+    box-shadow: 0 0 0 3px var(--amber);
+}
+
+/* ----------------------------------------------------------------- land -- */
+
+.compound-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 10px;
+}
+
+.compound-block {
+    display: block;
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    background: var(--navy);
+    box-shadow: 0 0 0 2px var(--line);
+    text-align: left;
+    cursor: pointer;
+}
+
+.compound-block:hover,
+.compound-block:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.compound-block:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.compound-block b {
+    display: block;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--cream);
+}
+
+.compound-block span {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--amber);
+}
+
+/*
+| Taking ground in, and giving it back.
+|
+| Rust rather than amber for the second one, matching the peg the map puts over
+| a block that could go back — the two are opposites and should never be told
+| apart only by reading them.
+*/
+.compound-block[data-mode='give']:hover,
+.compound-block[data-mode='give']:focus-visible {
+    box-shadow: 0 0 0 2px var(--rust);
+}
+
+.compound-block[data-mode='give'] span {
+    color: var(--rust);
+}
+
+/*
+| Which half of the Land tab is showing.
+|
+| The two lists used to sit one above the other, and with seventeen blocks on
+| the frontier the way to reach "give back" was to scroll past all of them —
+| which for anybody who did not already know it was there is the same as it not
+| existing. The count is on the button because whether there is anything to give
+| back at all is the first thing somebody wants to know.
+*/
+.compound-seg {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    margin: 12px 0 4px;
+}
+
+.compound-seg-btn {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 6px;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    cursor: pointer;
+}
+
+.compound-seg-btn b {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.compound-seg-btn span {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+}
+
+.compound-seg-btn:hover,
+.compound-seg-btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.compound-seg-btn[data-on='true'] {
+    background: var(--amber);
+    box-shadow: 0 0 0 2px var(--ink);
+}
+
+.compound-seg-btn[data-on='true'] b,
+.compound-seg-btn[data-on='true'] span {
+    color: var(--ink);
+}
+
+.compound-seg-btn[data-mode='give'][data-on='true'] {
+    background: var(--rust);
+}
+
+.compound-seg-btn[data-mode='give'][data-on='true'] b,
+.compound-seg-btn[data-mode='give'][data-on='true'] span {
+    color: var(--cream);
+}
+
+/*
+| "Not now".
+|
+| Under every confirmation, and deliberately the quietest thing in the panel —
+| it is the button that does nothing, and a way out that shouts is a way out
+| people take by accident.
+*/
+.compound-quiet {
+    width: 100%;
+    margin-top: 6px;
+    padding: 9px;
+    border: 0;
+    background: transparent;
+    box-shadow: 0 0 0 2px var(--line);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.compound-quiet:hover,
+.compound-quiet:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+    color: var(--cream);
+}
+
+.compound-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.compound-swatch {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    box-shadow: 0 0 0 2px var(--line);
+    cursor: pointer;
+}
+
+.compound-swatch[data-on='true'] {
+    box-shadow: 0 0 0 3px var(--amber);
+}
+
+.compound-go {
+    width: 100%;
+    margin-top: 16px;
+    padding: 11px;
+    border: 0;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px var(--ink);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.compound-danger {
+    width: 100%;
+    margin-top: 16px;
+    padding: 10px;
+    border: 0;
+    background: var(--rust);
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--cream);
+    cursor: pointer;
+}
+
+.compound-danger[data-sure='true'] {
+    background: var(--ink);
+    box-shadow: 0 0 0 2px var(--rust);
+}
+
+/*
+|------------------------------------------------------------------------------
+| What is on the brush
+|------------------------------------------------------------------------------
+|
+| A loaded brush is a mode: every press on the map means something different
+| while one is on. It used to be invisible the moment the panel closed, which is
+| how somebody ends up laying a path they had stopped meaning to lay and cannot
+| work out why. This sits above the dock for exactly as long as the brush is
+| loaded — the surface itself, its name, and the way out.
+*/
+.compound-brushchip {
+    position: fixed;
+    left: 50%;
+    bottom: 152px;
+    z-index: 24;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 6px 6px 8px;
+    transform: translateX(-50%);
+    background: var(--ink);
+    box-shadow: 0 0 0 3px var(--amber);
+}
+
+.compound-brushchip[hidden] {
+    display: none;
+}
+
+.compound-brushchip canvas {
+    image-rendering: pixelated;
+    box-shadow: 0 0 0 2px var(--line);
+}
+
+.compound-brushchip span {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--cream);
+    white-space: nowrap;
+}
+
+.compound-brushchip button {
+    padding: 6px 11px;
+    border: 0;
+    background: var(--amber);
+    box-shadow: 0 0 0 2px var(--ink);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 11.5px;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.compound-brushchip button:hover,
+.compound-brushchip button:focus-visible {
+    background: var(--cream);
+}
+
+/* Clear of the dock, which is the one thing that must never be under it. */
+.world-stage[data-scene='compound'] .world-hint {
+    bottom: 92px;
+}
+
+.world-stage[data-scene='compound'] .world-npc {
+    bottom: 96px;
+}
+
+/*
+| What the server said about the last arrangement.
+|
+| Bottom centre, over everything, and gone again in a couple of seconds unless
+| it is a refusal — a refusal has to be read, and the reason it gives names the
+| building, so it is worth six.
+*/
+.compound-toast {
+    position: fixed;
+    left: 50%;
+    /* Above the dock, not across it. It reports on what the dock's buttons just
+       did, so covering them with the report is the one place it must not be. */
+    bottom: 132px;
+    z-index: 40;
+    margin: 0;
+    padding: 10px 16px;
+    background: var(--ink);
+    color: var(--cream);
+    box-shadow: 0 0 0 3px var(--cream);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    transform: translate(-50%, 14px);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 0.12s steps(2),
+        transform 0.12s steps(2);
+}
+
+.compound-toast[data-show='true'] {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+
+.compound-toast[data-tone='good'] {
+    box-shadow: 0 0 0 3px var(--green);
+}
+
+.compound-toast[data-tone='bad'] {
+    background: var(--rust);
+    box-shadow: 0 0 0 3px var(--ink);
+}
+
+/*
+| The title, off the map.
+|
+| In the town it sits in the sky, which is the largest empty space on the page.
+| The compound has no sky and no empty space — it is a map to every edge — so
+| ninety pixels of display type across the top of it covered four offices and
+| the sea took the rest. The masthead above already says what this screen is,
+| twice, so the heading stays for the document's structure and for anybody
+| reading it aloud, and stops being drawn.
+*/
+.world-stage[data-scene='compound'] .world-hero {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    transform: none;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The compound's labels
+|------------------------------------------------------------------------------
+|
+| Twenty-one office names, all on screen at once. Drawn in HTML rather than into
+| the canvas, which is the one place this design breaks its own rule on purpose:
+| pixel lettering at this size is mud, and these have to be read. Art on the
+| canvas, type in the interface.
+|
+| A white halo instead of a box, so a label sitting over a roof is legible
+| without twenty-one panels of chrome covering the compound.
+|
+*/
+
+/*
+| The name over a building.
+|
+| Outlined letters, and no box at all.
+|
+| Three goes at this. Dark text with a white halo read beautifully over a lawn
+| and vanished over everything else the compound is made of — a tree canopy, a
+| rust roof, the shadow side of a wall. Giving each name an opaque slab fixed
+| that and cost far too much: twenty-three black rectangles over a drawing whose
+| whole point is the drawing, and the labels became the thing you looked at.
+|
+| So the letters carry their own contrast instead. Cream on a hard one-pixel
+| ink outline — eight offsets, no blur, which is how a sprite is outlined and
+| how every game that has ever put a name over a unit has done it. It reads
+| over anything, and it takes exactly the space the word takes.
+|
+| No blur anywhere in here on purpose. A soft glow at this size turns to grey
+| mud at the integer zooms this screen actually runs at, and grey mud around
+| cream letters is the halo we started with.
+*/
+.compound-label {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 11.5px;
+    line-height: 1.2;
+    color: var(--cream);
+    text-shadow:
+        1px 0 0 #10131a,
+        -1px 0 0 #10131a,
+        0 1px 0 #10131a,
+        0 -1px 0 #10131a,
+        1px 1px 0 #10131a,
+        -1px 1px 0 #10131a,
+        1px -1px 0 #10131a,
+        -1px -1px 0 #10131a,
+        0 2px 0 rgba(16, 19, 26, 0.55);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Yours, in amber. The same outline holds it up, so the one building out of
+   twenty-three that is about you is picked out by colour alone. */
+.compound-label[data-mine='true'] {
+    color: var(--amber);
+}
+
+/*
+|------------------------------------------------------------------------------
+| The landmark panel
+|------------------------------------------------------------------------------
+|
+| A sheet that rises over the town when a landmark is clicked. Everything in it
+| is drawn the way the rest of the screen is — no radius, no blur, outlines as
+| zero-blur box-shadows, motion in steps() so it reads as frames rather than as
+| a slide.
+|
+| The photograph is the exception, and the only one. It is a real picture at
+| full quality, in a heavy cream frame: the frame is pixel art, the covered
+| court is the covered court. Pixelating it would make it consistent and
+| useless — the whole reason somebody uploads it is so a citizen recognises the
+| place.
+|
+*/
+
+.world-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+}
+
+/* The `hidden` attribute alone loses to `display: grid` above it, and a panel
+   that is only faded out is still in the tab order — so a keyboard user closing
+   it would find their next Tab inside it again. */
+.world-panel[hidden] {
+    display: none;
+}
+
+/* Everything behind it, darkened and clickable. A modal with no way out but a
+   small × in a corner is a modal people feel trapped by. */
+.world-panel-veil {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 19, 27, 0.72);
+    opacity: 0;
+    transition: opacity 0.16s steps(3);
+}
+
+.world-panel[data-open='true'] .world-panel-veil {
+    opacity: 1;
+}
+
+.world-panel-in {
+    position: relative;
+    width: min(720px, 100%);
+    /* Against the viewport, because the panel is over the viewport now rather
+       than sitting in the stage. Room for the frame at its largest plus the
+       facts, the notices and the way in underneath. */
+    max-height: min(90dvh, 880px);
+    overflow-y: auto;
+    padding: 16px 18px 20px;
+    /* Rises a little and settles, in steps. A sheet that slid the full height of
+       the screen took long enough that people clicked twice. */
+    transform: translateY(12px);
+    opacity: 0;
+    transition:
+        transform 0.16s steps(3),
+        opacity 0.16s steps(3);
+    background: var(--slate);
+    color: var(--cream);
+    /* The double lip: ink first, then amber, both hard. Reads as a drawn edge
+       with a highlight rather than as a shadow. */
+    box-shadow:
+        0 0 0 3px var(--ink),
+        0 -6px 0 var(--amber);
+}
+
+.world-panel[data-open='true'] .world-panel-in {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.world-panel-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.world-panel-head > div {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.world-panel-head h2 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 19px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.world-panel-head p {
+    margin: 4px 0 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--amber);
+}
+
+.world-panel-x {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    cursor: pointer;
+    transition: box-shadow 0.1s steps(2);
+}
+
+.world-panel-x:hover,
+.world-panel-x:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.world-panel-x canvas {
+    image-rendering: pixelated;
+    width: 16px;
+    height: 16px;
+}
+
+/* -------------------------------------------------------------- the frame -- */
+
+/*
+ * A grid rather than a stack, so the two arrows can share the picture's row.
+ * Centring them on the figure instead would centre them on the picture *and*
+ * its caption, which puts them a few pixels low — enough to look like a
+ * mistake, not enough for anybody to work out why.
+ */
+.world-frame {
+    display: grid;
+    grid-template-rows: auto auto;
+    margin: 14px 0 0;
+    padding: 6px;
+    background: var(--cream);
+    box-shadow: 0 0 0 3px var(--ink);
+}
+
+.world-frame-zoom,
+.world-frame-empty,
+.world-frame-arrow {
+    grid-row: 1;
+    grid-column: 1;
+}
+
+.world-frame figcaption {
+    grid-row: 2;
+    grid-column: 1;
+}
+
+/* The photograph is a button, because enlarging it is a thing you can do and a
+   thing you should be able to reach with a keyboard. */
+.world-frame-zoom {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+}
+
+.world-frame-zoom[hidden] {
+    display: none;
+}
+
+.world-frame-zoom img {
+    display: block;
+    width: 100%;
+    /* A fixed shape so the panel does not jump between a portrait and a
+       landscape photograph. The picture is covered into it rather than
+       letterboxed, because a band of cream around a photo of a beach reads as
+       a mistake — and anything the crop takes off is still there full-frame,
+       one click away. */
+    aspect-ratio: 16 / 10;
+    max-height: 54dvh;
+    object-fit: cover;
+    background: var(--haze);
+}
+
+/* Said quietly in the corner, and only while the pointer is on the picture.
+   Printed permanently it would be a caption on every photograph in the town. */
+.world-frame-hint {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    padding: 5px 8px;
+    background: var(--ink);
+    color: var(--cream);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s steps(2);
+}
+
+.world-frame-zoom:hover .world-frame-hint,
+.world-frame-zoom:focus-visible .world-frame-hint {
+    opacity: 1;
+}
+
+.world-frame-zoom:focus-visible {
+    outline: var(--pix) solid var(--amber);
+    outline-offset: -3px;
+}
+
+.world-frame-empty {
+    display: grid;
+    place-items: center;
+    /* Both, and both needed: a grid item with an aspect-ratio and a stretched
+       height derives its *width* from that height, and the empty frame ended up
+       narrower than the photograph it stands in for. */
+    align-self: start;
+    width: 100%;
+    margin: 0;
+    /* Shallower than a photograph would be. An empty frame is a note saying
+       nobody has uploaded one yet, and it has no business taking the room a
+       picture would have earned. */
+    aspect-ratio: 16 / 5;
+    max-height: 42dvh;
+    background: var(--haze);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--ink);
+    text-align: center;
+}
+
+.world-frame figcaption {
+    margin: 6px 2px 0;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--ink-3);
+}
+
+.world-frame figcaption:empty {
+    display: none;
+}
+
+.world-frame-arrow {
+    z-index: 1;
+    align-self: center;
+    width: 34px;
+    height: 40px;
+    margin: 0 10px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: var(--ink);
+    box-shadow: 0 0 0 2px var(--cream);
+    cursor: pointer;
+    transition: transform 0.1s steps(2);
+}
+
+.world-frame-arrow.prev {
+    justify-self: start;
+}
+
+.world-frame-arrow.next {
+    justify-self: end;
+}
+
+.world-frame-arrow:hover,
+.world-frame-arrow:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.world-frame-arrow.prev:hover,
+.world-frame-arrow.prev:focus-visible {
+    transform: translateX(-2px);
+}
+
+.world-frame-arrow.next:hover,
+.world-frame-arrow.next:focus-visible {
+    transform: translateX(2px);
+}
+
+.world-frame-arrow canvas {
+    image-rendering: pixelated;
+    width: 16px;
+    height: 16px;
+}
+
+/* One photograph needs no way through to the next one. */
+.world-frame[data-single='true'] .world-frame-arrow,
+.world-frame[data-single='true'] ~ .world-dots {
+    display: none;
+}
+
+/*
+|------------------------------------------------------------------------------
+| The photograph, enlarged
+|------------------------------------------------------------------------------
+|
+| A panel wide enough to hold a photograph and everything written about a place
+| is not wide enough to look at the photograph. So there are two sizes, and this
+| is the second: the picture on black, as large as the glass allows, uncropped.
+|
+| Above the panel rather than replacing it. Closing it puts somebody back where
+| they were rather than back on the map.
+|
+*/
+
+.world-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 5vmin;
+    background: rgba(10, 12, 17, 0.94);
+    cursor: zoom-out;
+    opacity: 0;
+    transition: opacity 0.12s steps(2);
+}
+
+.world-lightbox[hidden] {
+    display: none;
+}
+
+.world-lightbox[data-open='true'] {
+    opacity: 1;
+}
+
+.world-lightbox img {
+    max-width: 100%;
+    /* Room for the caption underneath without it ever sitting on the picture. */
+    max-height: 82dvh;
+    object-fit: contain;
+    box-shadow: 0 0 0 4px var(--cream);
+}
+
+.world-lightbox-cap {
+    position: absolute;
+    left: 50%;
+    bottom: 2.5vmin;
+    transform: translateX(-50%);
+    max-width: 90vw;
+    margin: 0;
+    padding: 8px 12px;
+    background: var(--ink);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--cream);
+    text-align: center;
+}
+
+.world-lightbox-cap:empty {
+    display: none;
+}
+
+.world-lightbox-x,
+.world-lightbox-arrow {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: var(--ink);
+    box-shadow: 0 0 0 2px var(--cream);
+    cursor: pointer;
+    transition: box-shadow 0.1s steps(2);
+}
+
+.world-lightbox-x:hover,
+.world-lightbox-x:focus-visible,
+.world-lightbox-arrow:hover,
+.world-lightbox-arrow:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.world-lightbox-x {
+    top: 2.5vmin;
+    right: 2.5vmin;
+    width: 40px;
+    height: 40px;
+}
+
+.world-lightbox-arrow {
+    top: calc(50% - 28px);
+    width: 44px;
+    height: 56px;
+}
+
+.world-lightbox-arrow.prev {
+    left: 2.5vmin;
+}
+
+.world-lightbox-arrow.next {
+    right: 2.5vmin;
+}
+
+.world-lightbox[data-single='true'] .world-lightbox-arrow {
+    display: none;
+}
+
+.world-lightbox canvas {
+    image-rendering: pixelated;
+    width: 16px;
+    height: 16px;
+}
+
+/* --------------------------------------------------------------- the dots -- */
+
+.world-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.world-dots button {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 0;
+    background: var(--line);
+    cursor: pointer;
+}
+
+.world-dots button[aria-current='true'] {
+    background: var(--amber);
+}
+
+.world-dots button:focus-visible {
+    outline: var(--pix) solid var(--amber);
+    outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------- the foot -- */
+
+.world-panel-say {
+    margin: 14px 0 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+/* ------------------------------------------------- what is in an office -- */
+
+.world-panel-extra {
+    margin-top: 14px;
+}
+
+.world-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+}
+
+.world-facts dt {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--muted-2);
+}
+
+.world-facts dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--cream);
+}
+
+.world-extra-head {
+    margin: 14px 0 6px;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+}
+
+.world-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.world-links a {
+    display: inline-block;
+    padding: 7px 10px;
+    background: var(--slate-2);
+    box-shadow: 0 0 0 2px var(--line);
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--cream);
+    text-decoration: none;
+    transition: box-shadow 0.1s steps(2);
+}
+
+.world-links a:hover,
+.world-links a:focus-visible {
+    box-shadow: 0 0 0 2px var(--amber);
+}
+
+.world-links.doors a {
+    background: var(--navy);
+}
+
+.world-signin {
+    margin: 14px 0 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.world-signin a {
+    color: var(--amber);
+}
+
+.world-panel-go {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 11px 16px;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px var(--ink);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: transform 0.1s steps(2);
+}
+
+.world-panel-go:hover,
+.world-panel-go:focus-visible {
+    transform: translateY(-2px);
+}
+
+/*
+|------------------------------------------------------------------------------
 | Stillness
 |------------------------------------------------------------------------------
 |
@@ -863,7 +2335,12 @@
 
 [data-motion='off'] .world-wipe span,
 [data-motion='off'] .world-bubble,
-[data-motion='off'] .world-btn {
+[data-motion='off'] .world-btn,
+[data-motion='off'] .world-panel-in,
+[data-motion='off'] .world-panel-veil,
+[data-motion='off'] .world-lightbox,
+[data-motion='off'] .world-panel-go,
+[data-motion='off'] .world-frame-arrow {
     transition: none !important;
 }
 
@@ -874,7 +2351,10 @@
     }
 
     .world-wipe span,
-    .world-bubble {
+    .world-bubble,
+    .world-panel-in,
+    .world-panel-veil,
+    .world-lightbox {
         transition: none !important;
     }
 }

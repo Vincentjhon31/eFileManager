@@ -7,10 +7,15 @@ export default defineConfig({
     plugins: [
         laravel({
             /*
-             * Four entries, and the welcome page is the only thing that loads
-             * the last two. The staff interface has no use for a pixel palette
-             * or a canvas renderer, and the welcome page has no use for Alpine —
-             * so they are separate bundles rather than more lines in app.css.
+             * The staff interface has no use for a pixel palette or a canvas
+             * renderer, and the two drawn screens have no use for Alpine — so
+             * they are separate bundles rather than more lines in app.css.
+             *
+             * world.js and compound.js are two entries rather than one because
+             * they are two projections of the same paint: whichever screen you
+             * are on, the other one's sprites and geometry are dead weight. What
+             * they genuinely share lives in resources/js/world/ and Vite hoists
+             * it into a chunk both point at.
              */
             input: [
                 'resources/css/app.css',
@@ -26,6 +31,7 @@ export default defineConfig({
                 'resources/css/skin.css',
                 'resources/css/world.css',
                 'resources/js/world.js',
+                'resources/js/compound.js',
             ],
             refresh: true,
             /*

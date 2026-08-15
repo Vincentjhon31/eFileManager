@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * An office of the municipal government, or an outside party documents are
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * office to run the pilot while still recording a complete, honest trail.
  */
 #[Fillable([
-    'code', 'name', 'short_name', 'parent_id', 'head_user_id',
+    'code', 'name', 'short_name', 'summary', 'parent_id', 'head_user_id',
     'is_onboarded', 'is_external', 'sort_order',
 ])]
 class Department extends Model
@@ -59,6 +60,17 @@ class Department extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class);
+    }
+
+    /** Where this office stands in the drawn compound, if anywhere yet. */
+    public function building(): HasOne
+    {
+        return $this->hasOne(CompoundBuilding::class);
     }
 
     /** Offices of the municipal government itself. */

@@ -42,6 +42,13 @@
     --navy: #1b3a6b;
     --sky: #8fc7d6;
     --haze: #cfe4e2;
+
+    /* The one colour the art and the interface both need: the compound stands
+       in open country, and the page behind its canvas has to be the same field
+       so a frame the renderer has not caught up with is still land. Matches
+       C.grassDark in resources/js/world/paint.js. */
+    --field: #54823c;
+
     --muted: #9dafc6;
     --muted-2: #7e8fa8;
 
